@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* shadcn/ui zinc-dark palette */
+@layer base {
+  :root {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+    --radius: 0.5rem;
+  }
+
+  body {
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  }
+
+  /* Subtle scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: hsl(240 5% 22%); border-radius: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+}
+
+@layer components {
+  .severity-p0 { @apply bg-red-500/15 text-red-400 border border-red-500/30; }
+  .severity-p1 { @apply bg-orange-500/15 text-orange-300 border border-orange-500/30; }
+  .severity-p2 { @apply bg-yellow-500/15 text-yellow-300 border border-yellow-500/30; }
+  .severity-p3 { @apply bg-zinc-700/40 text-zinc-300 border border-zinc-600/40; }
+
+  /* Markdown rendering for ticket bodies (Jira-style template). */
+  .prose-reviewer { color: hsl(var(--foreground)); }
+  .prose-reviewer h1 { @apply text-xl font-semibold tracking-tight mt-6 mb-3; }
+  .prose-reviewer h2 { @apply text-base font-semibold tracking-tight mt-5 mb-2 text-zinc-100; }
+  .prose-reviewer h3 { @apply text-sm font-semibold mt-4 mb-1.5 text-zinc-200; }
+  .prose-reviewer p { @apply my-2 text-zinc-300; }
+  .prose-reviewer strong { @apply text-zinc-100 font-semibold; }
+  .prose-reviewer em { @apply italic text-zinc-300; }
+  .prose-reviewer a { @apply text-primary underline-offset-2 hover:underline; }
+  .prose-reviewer ul { @apply list-disc list-outside ml-5 my-2 space-y-1; }
+  .prose-reviewer ol { @apply list-decimal list-outside ml-5 my-2 space-y-1; }
+  .prose-reviewer li { @apply text-zinc-300; }
+  .prose-reviewer li > p { @apply my-0; }
+  .prose-reviewer blockquote { @apply border-l-2 border-zinc-700 pl-3 my-2 text-zinc-400; }
+  .prose-reviewer hr { @apply border-border my-4; }
+  .prose-reviewer code {
+    @apply rounded bg-zinc-800/70 text-zinc-200 px-1.5 py-0.5 text-[0.85em] font-mono;
+  }
+  .prose-reviewer pre {
+    @apply rounded-md border border-border bg-zinc-950/60 p-3 my-3 overflow-x-auto;
+  }
+  .prose-reviewer pre code {
+    @apply bg-transparent p-0 text-xs;
+  }
+  .prose-reviewer table { @apply text-xs my-3 border border-border rounded-md overflow-hidden; }
+  .prose-reviewer th, .prose-reviewer td { @apply border-b border-border px-2 py-1 text-left; }
+  .prose-reviewer input[type="checkbox"] { @apply mr-1.5 align-middle; }
+}

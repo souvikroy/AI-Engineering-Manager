@@ -1,0 +1,50 @@
+# Render Blueprint for the FastAPI API.
+# To deploy: connect the repo to Render and use this blueprint.
+# Worker tier is included but scaled to 0 by default; flip when scaling out.
+
+services:
+  - type: web
+    name: reviewer-api
+    runtime: docker
+    dockerfilePath: ./infra/Dockerfile
+    dockerContext: .
+    plan: standard
+    region: oregon
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: ROLE
+        value: web
+      - key: PORT
+        value: 8000
+      - key: WEB_WORKERS
+        value: 2
+      # Secrets — set in Render dashboard.
+      - key: DATABASE_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: PINECONE_INDEX
+        value: reviewer-prod
+      - key: REVIEWER_VECTOR_BACKEND
+        value: pinecone
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FERNET_KEY
+        sync: false
+      - key: FERNET_KEY_SECONDARY
+        sync: false
+      - key: INTERNAL_HMAC_SECRET
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: REVIEWER_BUDGET_USD
+        value: 10.0
+      - key: REVIEWER_BUDGET_TOKENS
+        value: 2000000

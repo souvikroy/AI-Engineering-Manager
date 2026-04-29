@@ -1,0 +1,274 @@
+# Classification overlay for the 21-workflow ruleset.
+# kind:     static | llm | hybrid
+# severity: P0 (block+escalate) | P1 (block) | P2 (recommend) | P3 (nit)
+# runner:   name of static module that emits this finding (only for static/hybrid)
+
+_defaults:
+  kind: llm
+  severity: P2
+
+# --- Workflow 1: Pre-Review Context Discovery ---
+"R1.1": { kind: static, severity: P2, runner: pr_description }
+"R1.2": { kind: static, severity: P2, runner: pr_title }
+"R1.3": { kind: static, severity: P2, runner: linked_ticket }
+"R1.4": { kind: llm,    severity: P2 }
+"R1.5": { kind: llm,    severity: P3 }
+"R1.6": { kind: llm,    severity: P1 }
+"R1.7": { kind: llm,    severity: P3 }
+"R1.8": { kind: llm,    severity: P2 }
+"R1.9": { kind: llm,    severity: P2 }
+
+# --- Workflow 2: Hygiene & Readiness ---
+"R2.1":  { kind: static, severity: P1, runner: ci_status }
+"R2.2":  { kind: static, severity: P2, runner: diff_size }
+"R2.3":  { kind: llm,    severity: P2 }
+"R2.4":  { kind: static, severity: P2, runner: todo_scan }
+"R2.5":  { kind: static, severity: P2, runner: commented_code }
+"R2.6":  { kind: static, severity: P0, runner: secret_scan }
+"R2.7":  { kind: static, severity: P3, runner: generated_files }
+"R2.8":  { kind: static, severity: P2, runner: lint }
+"R2.9":  { kind: static, severity: P1, runner: merge_conflict }
+"R2.10": { kind: static, severity: P1, runner: skipped_tests }
+
+# --- Workflow 3: Scope ---
+"R3.1": { kind: llm, severity: P2 }
+"R3.2": { kind: llm, severity: P3 }
+"R3.3": { kind: llm, severity: P1 }
+"R3.4": { kind: llm, severity: P2 }
+"R3.5": { kind: llm, severity: P2 }
+"R3.6": { kind: llm, severity: P1 }
+"R3.7": { kind: llm, severity: P1 }
+
+# --- Workflow 4: Architecture ---
+"R4.1":  { kind: llm,    severity: P1 }
+"R4.2":  { kind: hybrid, severity: P1, runner: dep_cycle }
+"R4.3":  { kind: hybrid, severity: P1, runner: business_logic_layer }
+"R4.4":  { kind: hybrid, severity: P2, runner: dao_layering }
+"R4.5":  { kind: llm,    severity: P2 }
+"R4.6":  { kind: llm,    severity: P2 }
+"R4.7":  { kind: hybrid, severity: P2, runner: inheritance_check }
+"R4.8":  { kind: hybrid, severity: P1, runner: global_state }
+"R4.9":  { kind: hybrid, severity: P1, runner: http_client_decl }
+"R4.10": { kind: llm,    severity: P3 }
+
+# --- Workflow 5: Domain Logic ---
+"R5.1": { kind: llm,    severity: P2 }
+"R5.2": { kind: llm,    severity: P2 }
+"R5.3": { kind: llm,    severity: P1 }
+"R5.4": { kind: llm,    severity: P3 }
+"R5.5": { kind: hybrid, severity: P0, runner: money_float }
+"R5.6": { kind: hybrid, severity: P1, runner: time_local }
+"R5.7": { kind: hybrid, severity: P1, runner: inline_authz }
+"R5.8": { kind: hybrid, severity: P0, runner: audit_emit }
+"R5.9": { kind: llm,    severity: P2 }
+
+# --- Workflow 6: Correctness ---
+"R6.1":  { kind: llm,    severity: P1 }
+"R6.2":  { kind: llm,    severity: P1 }
+"R6.3":  { kind: llm,    severity: P1 }
+"R6.4":  { kind: hybrid, severity: P0, runner: float_eq_money }
+"R6.5":  { kind: hybrid, severity: P1, runner: int_overflow }
+"R6.6":  { kind: hybrid, severity: P1, runner: retry_idempotency }
+"R6.7":  { kind: hybrid, severity: P1, runner: concurrency_unsafe }
+"R6.8":  { kind: llm,    severity: P1 }
+"R6.9":  { kind: llm,    severity: P1 }
+"R6.10": { kind: llm,    severity: P1 }
+"R6.11": { kind: llm,    severity: P2 }
+
+# --- Workflow 7: Error Handling ---
+"R7.1": { kind: hybrid, severity: P1, runner: catch_all }
+"R7.2": { kind: hybrid, severity: P2, runner: null_failure }
+"R7.3": { kind: llm,    severity: P1 }
+"R7.4": { kind: llm,    severity: P1 }
+"R7.5": { kind: hybrid, severity: P1, runner: tx_rollback }
+"R7.6": { kind: llm,    severity: P1 }
+"R7.7": { kind: llm,    severity: P0 }
+"R7.8": { kind: llm,    severity: P2 }
+"R7.9": { kind: hybrid, severity: P1, runner: unbounded_retry }
+
+# --- Workflow 8: Security ---
+"R8.1":  { kind: hybrid, severity: P0, runner: endpoint_authz }
+"R8.2":  { kind: hybrid, severity: P0, runner: server_side_id }
+"R8.3":  { kind: hybrid, severity: P1, runner: input_schema }
+"R8.4":  { kind: static, severity: P0, runner: sql_concat }
+"R8.5":  { kind: hybrid, severity: P0, runner: html_unsafe }
+"R8.6":  { kind: hybrid, severity: P0, runner: ssrf }
+"R8.7":  { kind: hybrid, severity: P1, runner: path_traversal }
+"R8.8":  { kind: hybrid, severity: P1, runner: file_upload }
+"R8.9":  { kind: static, severity: P0, runner: secret_scan }
+"R8.10": { kind: hybrid, severity: P1, runner: log_secrets }
+"R8.11": { kind: llm,    severity: P1 }
+"R8.12": { kind: static, severity: P1, runner: dep_audit }
+"R8.13": { kind: llm,    severity: P1 }
+"R8.14": { kind: hybrid, severity: P0, runner: tenant_predicate }
+"R8.15": { kind: llm,    severity: P1 }
+"R8.16": { kind: llm,    severity: P1 }
+
+# --- Workflow 9: Data & Database ---
+"R9.1":  { kind: hybrid, severity: P0, runner: migration_safety }
+"R9.2":  { kind: hybrid, severity: P1, runner: not_null_no_default }
+"R9.3":  { kind: llm,    severity: P1 }
+"R9.4":  { kind: hybrid, severity: P0, runner: long_lock }
+"R9.5":  { kind: static, severity: P0, runner: index_concurrently }
+"R9.6":  { kind: llm,    severity: P2 }
+"R9.7":  { kind: hybrid, severity: P1, runner: nplus1 }
+"R9.8":  { kind: hybrid, severity: P2, runner: foreign_keys }
+"R9.9":  { kind: static, severity: P1, runner: migration_down }
+"R9.10": { kind: llm,    severity: P1 }
+"R9.11": { kind: llm,    severity: P1 }
+"R9.12": { kind: hybrid, severity: P2, runner: table_pk_timestamps }
+"R9.13": { kind: llm,    severity: P1 }
+"R9.14": { kind: llm,    severity: P1 }
+
+# --- Workflow 10: API Contract ---
+"R10.1":  { kind: llm,    severity: P1 }
+"R10.2":  { kind: llm,    severity: P1 }
+"R10.3":  { kind: static, severity: P1, runner: openapi_present }
+"R10.4":  { kind: hybrid, severity: P2, runner: status_codes }
+"R10.5":  { kind: llm,    severity: P2 }
+"R10.6":  { kind: llm,    severity: P2 }
+"R10.7":  { kind: hybrid, severity: P1, runner: sort_allowlist }
+"R10.8":  { kind: llm,    severity: P2 }
+"R10.9":  { kind: llm,    severity: P1 }
+"R10.10": { kind: llm,    severity: P1 }
+"R10.11": { kind: llm,    severity: P1 }
+
+# --- Workflow 11: Frontend / UI ---
+"R11.1":  { kind: llm,    severity: P2 }
+"R11.2":  { kind: llm,    severity: P2 }
+"R11.3":  { kind: llm,    severity: P1 }
+"R11.4":  { kind: hybrid, severity: P2, runner: a11y }
+"R11.5":  { kind: llm,    severity: P3 }
+"R11.6":  { kind: llm,    severity: P2 }
+"R11.7":  { kind: llm,    severity: P2 }
+"R11.8":  { kind: hybrid, severity: P0, runner: client_pii }
+"R11.9":  { kind: llm,    severity: P3 }
+"R11.10": { kind: static, severity: P3, runner: component_size }
+"R11.11": { kind: llm,    severity: P3 }
+"R11.12": { kind: llm,    severity: P3 }
+"R11.13": { kind: llm,    severity: P3 }
+
+# --- Workflow 12: Performance ---
+"R12.1":  { kind: llm,    severity: P3 }
+"R12.2":  { kind: llm,    severity: P1 }
+"R12.3":  { kind: hybrid, severity: P1, runner: hot_path }
+"R12.4":  { kind: llm,    severity: P1 }
+"R12.5":  { kind: llm,    severity: P2 }
+"R12.6":  { kind: hybrid, severity: P1, runner: pagination_caps }
+"R12.7":  { kind: llm,    severity: P1 }
+"R12.8":  { kind: llm,    severity: P2 }
+"R12.9":  { kind: llm,    severity: P3 }
+"R12.10": { kind: llm,    severity: P3 }
+
+# --- Workflow 13: Concurrency / Distributed ---
+"R13.1":  { kind: llm,    severity: P1 }
+"R13.2":  { kind: llm,    severity: P1 }
+"R13.3":  { kind: llm,    severity: P1 }
+"R13.4":  { kind: llm,    severity: P2 }
+"R13.5":  { kind: llm,    severity: P1 }
+"R13.6":  { kind: llm,    severity: P0 }
+"R13.7":  { kind: llm,    severity: P1 }
+"R13.8":  { kind: hybrid, severity: P1, runner: unbounded_retry }
+"R13.9":  { kind: llm,    severity: P2 }
+"R13.10": { kind: llm,    severity: P2 }
+
+# --- Workflow 14: Testing ---
+"R14.1":  { kind: llm,    severity: P1 }
+"R14.2":  { kind: hybrid, severity: P1, runner: test_coverage }
+"R14.3":  { kind: llm,    severity: P2 }
+"R14.4":  { kind: llm,    severity: P2 }
+"R14.5":  { kind: llm,    severity: P3 }
+"R14.6":  { kind: llm,    severity: P2 }
+"R14.7":  { kind: hybrid, severity: P1, runner: test_sleep }
+"R14.8":  { kind: hybrid, severity: P2, runner: rng_seed }
+"R14.9":  { kind: llm,    severity: P2 }
+"R14.10": { kind: llm,    severity: P1 }
+"R14.11": { kind: llm,    severity: P2 }
+"R14.12": { kind: llm,    severity: P1 }
+"R14.13": { kind: llm,    severity: P1 }
+
+# --- Workflow 15: Maintainability ---
+"R15.1":  { kind: llm,    severity: P2 }
+"R15.2":  { kind: static, severity: P3, runner: function_length }
+"R15.3":  { kind: static, severity: P3, runner: cyclomatic }
+"R15.4":  { kind: hybrid, severity: P3, runner: bool_params }
+"R15.5":  { kind: llm,    severity: P3 }
+"R15.6":  { kind: llm,    severity: P3 }
+"R15.7":  { kind: llm,    severity: P3 }
+"R15.8":  { kind: llm,    severity: P3 }
+"R15.9":  { kind: static, severity: P3, runner: dead_code }
+"R15.10": { kind: llm,    severity: P3 }
+"R15.11": { kind: static, severity: P3, runner: file_length }
+"R15.12": { kind: llm,    severity: P3 }
+"R15.13": { kind: llm,    severity: P3 }
+
+# --- Workflow 16: Observability ---
+"R16.1":  { kind: llm,    severity: P2 }
+"R16.2":  { kind: llm,    severity: P2 }
+"R16.3":  { kind: llm,    severity: P2 }
+"R16.4":  { kind: llm,    severity: P1 }
+"R16.5":  { kind: llm,    severity: P2 }
+"R16.6":  { kind: llm,    severity: P1 }
+"R16.7":  { kind: llm,    severity: P2 }
+"R16.8":  { kind: llm,    severity: P1 }
+"R16.9":  { kind: llm,    severity: P2 }
+"R16.10": { kind: hybrid, severity: P1, runner: pii_in_logs }
+"R16.11": { kind: llm,    severity: P2 }
+
+# --- Workflow 17: Deployment & Rollback ---
+"R17.1":  { kind: llm, severity: P1 }
+"R17.2":  { kind: llm, severity: P1 }
+"R17.3":  { kind: llm, severity: P2 }
+"R17.4":  { kind: llm, severity: P1 }
+"R17.5":  { kind: llm, severity: P2 }
+"R17.6":  { kind: llm, severity: P2 }
+"R17.7":  { kind: llm, severity: P2 }
+"R17.8":  { kind: llm, severity: P1 }
+"R17.9":  { kind: llm, severity: P0 }
+"R17.10": { kind: llm, severity: P2 }
+
+# --- Workflow 18: Dependencies ---
+"R18.1":  { kind: llm,    severity: P2 }
+"R18.2":  { kind: static, severity: P1, runner: license_audit }
+"R18.3":  { kind: llm,    severity: P1 }
+"R18.4":  { kind: static, severity: P1, runner: dep_audit }
+"R18.5":  { kind: static, severity: P2, runner: lockfile_present }
+"R18.6":  { kind: static, severity: P3, runner: pin_range }
+"R18.7":  { kind: llm,    severity: P2 }
+"R18.8":  { kind: static, severity: P2, runner: duplicate_deps }
+"R18.9":  { kind: llm,    severity: P3 }
+"R18.10": { kind: llm,    severity: P3 }
+
+# --- Workflow 19: Documentation ---
+"R19.1": { kind: hybrid, severity: P2, runner: readme_drift }
+"R19.2": { kind: hybrid, severity: P1, runner: api_doc_drift }
+"R19.3": { kind: llm,    severity: P2 }
+"R19.4": { kind: hybrid, severity: P2, runner: changelog_drift }
+"R19.5": { kind: llm,    severity: P2 }
+"R19.6": { kind: llm,    severity: P3 }
+"R19.7": { kind: llm,    severity: P1 }
+"R19.8": { kind: llm,    severity: P2 }
+
+# --- Workflow 20: Review Comment Quality (self-check on our own output) ---
+"R20.1":  { kind: llm, severity: P2 }
+"R20.2":  { kind: llm, severity: P2 }
+"R20.3":  { kind: llm, severity: P2 }
+"R20.4":  { kind: llm, severity: P2 }
+"R20.5":  { kind: llm, severity: P3 }
+"R20.6":  { kind: llm, severity: P3 }
+"R20.7":  { kind: llm, severity: P3 }
+"R20.8":  { kind: llm, severity: P2 }
+"R20.9":  { kind: llm, severity: P3 }
+"R20.10": { kind: llm, severity: P3 }
+
+# --- Workflow 21: Approval Decision Framework (verdict producer) ---
+"R21.1":  { kind: llm, severity: P0 }
+"R21.2":  { kind: llm, severity: P1 }
+"R21.3":  { kind: llm, severity: P2 }
+"R21.4":  { kind: llm, severity: P1 }
+"R21.5":  { kind: llm, severity: P1 }
+"R21.6":  { kind: llm, severity: P3 }
+"R21.7":  { kind: llm, severity: P1 }
+"R21.8":  { kind: llm, severity: P0 }
+"R21.9":  { kind: llm, severity: P3 }
+"R21.10": { kind: llm, severity: P3 }

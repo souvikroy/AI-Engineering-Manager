@@ -1,0 +1,13 @@
+.venv
+.reviewer
+node_modules
+apps/desktop/node_modules
+apps/desktop/dist
+__pycache__
+*.pyc
+.git
+.env
+.env.*
+report
+reviewer.db
+.DS_Store
