@@ -1,0 +1,13 @@
+{
+  "rotations": [
+    { "team": "team-platform", "primary": "eng-marco",  "secondary": "eng-priya",  "weekStarts": "2026-04-27" },
+    { "team": "team-mobile",   "primary": "eng-tomas",  "secondary": "eng-ling",   "weekStarts": "2026-04-27" },
+    { "team": "team-growth",   "primary": "eng-marcus", "secondary": "eng-elena",  "weekStarts": "2026-04-27" }
+  ],
+  "interrupts_this_week": [
+    { "engineerId": "eng-marco",  "count": 7, "totalMinutes": 220 },
+    { "engineerId": "eng-priya",  "count": 2, "totalMinutes": 30 },
+    { "engineerId": "eng-tomas",  "count": 3, "totalMinutes": 75 },
+    { "engineerId": "eng-marcus", "count": 4, "totalMinutes": 110 }
+  ]
+}

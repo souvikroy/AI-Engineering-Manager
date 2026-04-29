@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Team {
+  id        String     @id
+  name      String
+  mission   String
+  engineers Engineer[]
+  okrs      OKR[]
+}
+
+model Engineer {
+  id            String       @id
+  name          String
+  role          String
+  level         String
+  teamId        String
+  team          Team         @relation(fields: [teamId], references: [id])
+  joinedAt      DateTime
+  slackHandle   String
+  githubHandle  String
+  oneOnOnes     OneOnOne[]
+  ownedIncidents Incident[]
+}
+
+model OneOnOne {
+  id          String   @id @default(cuid())
+  engineerId  String
+  engineer    Engineer @relation(fields: [engineerId], references: [id])
+  date        DateTime
+  topics      String
+  commitments String
+  sentiment   String
+  notes       String
+}
+
+model DesignDoc {
+  id        String     @id @default(cuid())
+  title     String
+  author    String
+  content   String
+  tags      String
+  status    String
+  createdAt DateTime   @default(now())
+  decisions Decision[]
+}
+
+model Decision {
+  id          String     @id @default(cuid())
+  designDocId String?
+  designDoc   DesignDoc? @relation(fields: [designDocId], references: [id])
+  title       String
+  summary     String
+  options     String
+  chosen      String
+  rationale   String
+  tradeoffs   String
+  tags        String
+  createdAt   DateTime   @default(now())
+}
+
+model Incident {
+  id          String       @id
+  title       String
+  severity    String
+  status      String
+  openedAt    DateTime
+  resolvedAt  DateTime?
+  summary     String
+  ownerId     String?
+  owner       Engineer?    @relation(fields: [ownerId], references: [id])
+  alerts      String
+  postmortems Postmortem[]
+}
+
+model Postmortem {
+  id          String   @id @default(cuid())
+  incidentId  String
+  incident    Incident @relation(fields: [incidentId], references: [id])
+  timeline    String
+  rootCause   String
+  actionItems String
+  createdAt   DateTime @default(now())
+}
+
+model OKR {
+  id         String  @id
+  teamId     String
+  team       Team    @relation(fields: [teamId], references: [id])
+  objective  String
+  keyResults String
+  progress   Float
+  quarter    String
+  status     String
+}
+
+model BriefSnapshot {
+  id        String   @id @default(cuid())
+  date      DateTime
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model PRReview {
+  id               String    @id @default(cuid())
+  repo             String
+  prNumber         Int
+  prTitle          String
+  classification   String
+  verdict          String
+  summary          String
+  workflowsRun     String
+  postedCommentUrl String?
+  createdAt        DateTime  @default(now())
+  findings         Finding[]
+}
+
+model Finding {
+  id         String   @id @default(cuid())
+  prReviewId String
+  prReview   PRReview @relation(fields: [prReviewId], references: [id])
+  ruleId     String
+  workflowId Int
+  status     String
+  severity   String
+  evidence   String
+}
+
+model ChatSession {
+  id        String   @id @default(cuid())
+  title     String
+  messages  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

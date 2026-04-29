@@ -1,0 +1,17 @@
+{
+  "asOf": "2026-04-29T17:00:00Z",
+  "services": [
+    { "name": "api-gateway",   "team": "team-platform", "sli_latency_p99_ms": 412, "sli_latency_p99_target_ms": 350, "sli_error_rate_pct": 0.18, "sli_error_target_pct": 0.10, "uptime_30d_pct": 99.93 },
+    { "name": "auth-service",  "team": "team-platform", "sli_latency_p99_ms": 84,  "sli_latency_p99_target_ms": 100, "sli_error_rate_pct": 0.04, "sli_error_target_pct": 0.10, "uptime_30d_pct": 99.99 },
+    { "name": "ios-app",       "team": "team-mobile",   "sli_crash_free_pct": 99.71, "sli_crash_free_target_pct": 99.80, "uptime_30d_pct": null },
+    { "name": "android-app",   "team": "team-mobile",   "sli_crash_free_pct": 99.42, "sli_crash_free_target_pct": 99.80, "uptime_30d_pct": null },
+    { "name": "events-pipeline","team": "team-growth",  "sli_latency_p99_ms": 2400, "sli_latency_p99_target_ms": 1500, "sli_error_rate_pct": 0.05, "sli_error_target_pct": 0.10, "uptime_30d_pct": 99.81 },
+    { "name": "experiment-svc","team": "team-growth",   "sli_latency_p99_ms": 95,   "sli_latency_p99_target_ms": 150, "sli_error_rate_pct": 0.02, "sli_error_target_pct": 0.10, "uptime_30d_pct": 99.97 }
+  ],
+  "alerts": [
+    { "id": "alert-001", "service": "api-gateway",   "severity": "p3", "status": "open",     "openedAt": "2026-04-29T05:11:00Z", "title": "DB connections at 92%", "ownerId": "eng-marco", "thread": "marco started investigating; no user impact yet but trending up." },
+    { "id": "alert-002", "service": "android-app",   "severity": "p2", "status": "open",     "openedAt": "2026-04-27T14:50:00Z", "title": "Crash rate spike on Pixel 7a (FCM v3)", "ownerId": "eng-ling",  "thread": "Reproduced once; Ling needs a device to debug further." },
+    { "id": "alert-003", "service": "events-pipeline","severity": "p3","status": "open",     "openedAt": "2026-04-21T09:00:00Z", "title": "Duplicate events detected in production stream", "ownerId": "eng-yuki", "thread": "Yuki investigating for 8 days. No clear root cause yet." },
+    { "id": "alert-004", "service": "api-gateway",   "severity": "p2", "status": "resolved", "openedAt": "2026-04-28T03:20:00Z", "resolvedAt": "2026-04-28T03:48:00Z", "title": "5xx elevation, brief auto-resolved", "ownerId": "eng-amir", "thread": "Self-healed in 6 minutes; root cause unclear, postmortem optional per p2 policy." }
+  ]
+}

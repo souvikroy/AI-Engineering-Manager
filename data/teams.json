@@ -1,0 +1,40 @@
+{
+  "teams": [
+    {
+      "id": "team-platform",
+      "name": "Platform",
+      "mission": "Owns the API gateway, auth, and service mesh. Reliability target 99.95%.",
+      "engineers": [
+        { "id": "eng-amir",   "name": "Amir Hassan",      "role": "Staff Engineer",  "level": "L7", "joinedAt": "2021-03-14", "slackHandle": "@amir",   "githubHandle": "amirh" },
+        { "id": "eng-priya",  "name": "Priya Subramanian","role": "Senior Engineer", "level": "L6", "joinedAt": "2022-08-01", "slackHandle": "@priya",  "githubHandle": "priyas" },
+        { "id": "eng-marco",  "name": "Marco Bianchi",    "role": "Senior Engineer", "level": "L6", "joinedAt": "2022-11-20", "slackHandle": "@marco",  "githubHandle": "marcob" },
+        { "id": "eng-jen",    "name": "Jen Park",         "role": "Engineer",        "level": "L5", "joinedAt": "2023-06-12", "slackHandle": "@jen",    "githubHandle": "jenpark" },
+        { "id": "eng-deepak", "name": "Deepak Rao",       "role": "Engineer",        "level": "L4", "joinedAt": "2024-09-30", "slackHandle": "@deepak", "githubHandle": "deepakr" }
+      ]
+    },
+    {
+      "id": "team-mobile",
+      "name": "Mobile",
+      "mission": "iOS and Android apps. Owns the consumer experience and crash-free target 99.8%.",
+      "engineers": [
+        { "id": "eng-sara",   "name": "Sara Goldberg", "role": "Engineering Lead", "level": "L7", "joinedAt": "2020-09-01", "slackHandle": "@sara",   "githubHandle": "sarag" },
+        { "id": "eng-tomas",  "name": "Tomas Reyes",   "role": "Senior Engineer",  "level": "L6", "joinedAt": "2022-02-15", "slackHandle": "@tomas",  "githubHandle": "tomasr" },
+        { "id": "eng-ling",   "name": "Ling Chen",     "role": "Senior Engineer",  "level": "L6", "joinedAt": "2023-01-08", "slackHandle": "@ling",   "githubHandle": "lingc" },
+        { "id": "eng-aiden",  "name": "Aiden O'Brien", "role": "Engineer",         "level": "L5", "joinedAt": "2023-04-22", "slackHandle": "@aiden",  "githubHandle": "aideno" },
+        { "id": "eng-noor",   "name": "Noor Al-Sayed", "role": "Engineer",         "level": "L4", "joinedAt": "2024-11-04", "slackHandle": "@noor",   "githubHandle": "noora" }
+      ]
+    },
+    {
+      "id": "team-growth",
+      "name": "Growth",
+      "mission": "Acquisition funnels, A/B experimentation, and analytics pipeline.",
+      "engineers": [
+        { "id": "eng-ravi",    "name": "Ravi Sharma",       "role": "Engineering Lead", "level": "L7", "joinedAt": "2021-07-19", "slackHandle": "@ravi",    "githubHandle": "ravis" },
+        { "id": "eng-elena",   "name": "Elena Petrova",     "role": "Senior Engineer",  "level": "L6", "joinedAt": "2022-12-01", "slackHandle": "@elena",   "githubHandle": "elenap" },
+        { "id": "eng-marcus",  "name": "Marcus Johnson",    "role": "Senior Engineer",  "level": "L6", "joinedAt": "2023-09-11", "slackHandle": "@marcus",  "githubHandle": "marcusj" },
+        { "id": "eng-yuki",    "name": "Yuki Tanaka",       "role": "Engineer",         "level": "L5", "joinedAt": "2023-11-15", "slackHandle": "@yuki",    "githubHandle": "yukit" },
+        { "id": "eng-natalie", "name": "Natalie Wong",      "role": "Engineer",         "level": "L4", "joinedAt": "2025-01-13", "slackHandle": "@natalie", "githubHandle": "nataliew" }
+      ]
+    }
+  ]
+}

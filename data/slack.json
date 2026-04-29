@@ -1,0 +1,47 @@
+{
+  "channels": [
+    {
+      "name": "#platform",
+      "messages": [
+        { "ts": "2026-04-29T09:12:00Z", "user": "eng-deepak", "text": "hey, what minikube version do we standardize on for service mesh dev? trying to set up a local cluster, no luck with 1.32" },
+        { "ts": "2026-04-29T09:14:00Z", "user": "eng-deepak", "text": "(asked Friday but maybe I missed the reply, sorry to bug)" },
+        { "ts": "2026-04-29T11:30:00Z", "user": "eng-priya",  "text": "@marco when you get a sec — the JWT rotation PR (PLAT-2305) needs your security sign-off. canary's been clean for 16h" },
+        { "ts": "2026-04-29T14:22:00Z", "user": "eng-marco",  "text": "still digging into the connection pool thing. logs are useless without structured fields, this is going to take longer than I thought" },
+        { "ts": "2026-04-28T22:18:00Z", "user": "eng-marco",  "text": "yeah I'll get to the JWT review tonight" },
+        { "ts": "2026-04-29T03:14:00Z", "user": "eng-jen",    "text": "expecting tests to be flaky after the upgrade — am I overreacting if I just merge with `[expected-flake]`?" }
+      ]
+    },
+    {
+      "name": "#mobile",
+      "messages": [
+        { "ts": "2026-04-29T08:00:00Z", "user": "eng-sara",  "text": "App Store still not back. I'm going to ping our DevRel contact at Apple if it's not approved by EOD." },
+        { "ts": "2026-04-29T10:11:00Z", "user": "eng-ling",  "text": "FCM v3 crash only repros on Pixel 7a — anyone got one I can borrow? mine's at home" },
+        { "ts": "2026-04-29T10:45:00Z", "user": "eng-aiden", "text": "tomas can you take a look at MOB-993 universal links PR when free, no rush" },
+        { "ts": "2026-04-29T12:01:00Z", "user": "eng-noor",  "text": "got a few env vars missing from the new-hire doc — should I update it directly or is someone owning that?" }
+      ]
+    },
+    {
+      "name": "#growth",
+      "messages": [
+        { "ts": "2026-04-29T07:30:00Z", "user": "eng-yuki",   "text": "I've been on the duplicate events thing for a while now. I'm starting to feel like I'm missing something obvious. anyone want to pair?" },
+        { "ts": "2026-04-29T07:33:00Z", "user": "eng-yuki",   "text": "(it's been 8 days)" },
+        { "ts": "2026-04-29T09:55:00Z", "user": "eng-elena",  "text": "warehouse is dragging today, anyone else seeing query timeouts on the events table?" },
+        { "ts": "2026-04-29T15:40:00Z", "user": "eng-natalie","text": "first PR is up — would love feedback when anyone has a moment. I know the Go is rough, sorry in advance 😅" },
+        { "ts": "2026-04-29T22:11:00Z", "user": "eng-marcus", "text": "still working on the SDK migration. the deprecated APIs aren't documented anywhere I can find" }
+      ]
+    },
+    {
+      "name": "#incidents",
+      "messages": [
+        { "ts": "2026-04-28T03:42:00Z", "user": "eng-amir",  "text": "p2: api-gateway 5xx rate elevated for ~6m around 03:20 UTC. resolved itself, monitoring." },
+        { "ts": "2026-04-29T05:11:00Z", "user": "eng-marco", "text": "p3 alert: db connections at 92%. started investigating PLAT-2284, no user impact." }
+      ]
+    }
+  ],
+  "hesitation_signals": [
+    { "engineerId": "eng-deepak", "signal": "follow-up_question_no_response",  "detail": "Asked in #platform Friday, repeated Monday with apology — no answer in 4 days." },
+    { "engineerId": "eng-yuki",   "signal": "self_doubt_language",             "detail": "'feel like I'm missing something obvious', 'getting stuck' — 8 days on same task." },
+    { "engineerId": "eng-natalie","signal": "preemptive_apology",              "detail": "Apologizes for code quality before review starts." },
+    { "engineerId": "eng-jen",    "signal": "low_confidence_merge_request",    "detail": "Considering merging knowingly-flaky tests under a label." }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "sprints": [
+    { "id": "sprint-q2-w17", "team": "team-platform", "name": "Platform Sprint Q2-W17", "startsAt": "2026-04-21", "endsAt": "2026-05-04", "goal": "Ship gateway v2 RFC + JWT refresh rotation to 100%." },
+    { "id": "sprint-q2-w17-mob", "team": "team-mobile", "name": "Mobile Sprint Q2-W17", "startsAt": "2026-04-21", "endsAt": "2026-05-04", "goal": "Release 4.18; resolve FCM v3 crash on Android." },
+    { "id": "sprint-q2-w17-grw", "team": "team-growth", "name": "Growth Sprint Q2-W17", "startsAt": "2026-04-21", "endsAt": "2026-05-04", "goal": "Migrate 3 active experiments to SDK v2; ship activation dashboard." }
+  ],
+  "tickets": [
+    { "key": "PLAT-2284", "team": "team-platform", "sprintId": "sprint-q2-w17", "assigneeId": "eng-marco",  "title": "DB connection pool exhaustion in prod", "status": "In Progress", "type": "bug",     "priority": "High",   "openedDays": 4,  "lastMovedDays": 0 },
+    { "key": "PLAT-2301", "team": "team-platform", "sprintId": "sprint-q2-w17", "assigneeId": "eng-jen",    "title": "Express 4 → 5 upgrade",                  "status": "In Progress", "type": "chore",   "priority": "Medium", "openedDays": 6,  "lastMovedDays": 1 },
+    { "key": "PLAT-2305", "team": "team-platform", "sprintId": "sprint-q2-w17", "assigneeId": "eng-priya",  "title": "JWT refresh token rotation",             "status": "In Review",   "type": "feature", "priority": "High",   "openedDays": 11, "lastMovedDays": 2 },
+    { "key": "PLAT-2310", "team": "team-platform", "sprintId": "sprint-q2-w17", "assigneeId": "eng-deepak", "title": "Local k8s setup for service mesh dev",   "status": "In Progress", "type": "chore",   "priority": "Low",    "openedDays": 9,  "lastMovedDays": 6 },
+    { "key": "PLAT-2315", "team": "team-platform", "sprintId": "sprint-q2-w17", "assigneeId": "eng-amir",   "title": "RFC: Gateway v2 routing",                "status": "Drafting",    "type": "feature", "priority": "High",   "openedDays": 3,  "lastMovedDays": 0 },
+    { "key": "MOB-988",   "team": "team-mobile",   "sprintId": "sprint-q2-w17-mob", "assigneeId": "eng-sara",   "title": "Release 4.18 to App Store",      "status": "Blocked", "type": "chore", "priority": "High",   "openedDays": 12, "lastMovedDays": 5 },
+    { "key": "MOB-991",   "team": "team-mobile",   "sprintId": "sprint-q2-w17-mob", "assigneeId": "eng-ling",   "title": "Android crash on FCM v3",        "status": "In Progress","type": "bug",   "priority": "High",   "openedDays": 7,  "lastMovedDays": 1 },
+    { "key": "MOB-993",   "team": "team-mobile",   "sprintId": "sprint-q2-w17-mob", "assigneeId": "eng-aiden",  "title": "Universal links for sharing",    "status": "In Review", "type": "feature","priority": "Medium", "openedDays": 5,  "lastMovedDays": 0 },
+    { "key": "MOB-995",   "team": "team-mobile",   "sprintId": "sprint-q2-w17-mob", "assigneeId": "eng-tomas",  "title": "Refactor offline cache",         "status": "Done",      "type": "refactor","priority": "Medium", "openedDays": 8,  "lastMovedDays": 0 },
+    { "key": "MOB-998",   "team": "team-mobile",   "sprintId": "sprint-q2-w17-mob", "assigneeId": "eng-noor",   "title": "Onboarding tasks",               "status": "In Progress","type": "chore","priority": "Low",     "openedDays": 2,  "lastMovedDays": 0 },
+    { "key": "GRW-450", "team": "team-growth", "sprintId": "sprint-q2-w17-grw", "assigneeId": "eng-marcus",  "title": "Experiment SDK v1 → v2 migration", "status": "In Progress","type": "migration","priority": "High",  "openedDays": 9, "lastMovedDays": 1 },
+    { "key": "GRW-452", "team": "team-growth", "sprintId": "sprint-q2-w17-grw", "assigneeId": "eng-elena",   "title": "Activation funnel dashboard",      "status": "In Progress","type": "feature",  "priority": "Medium","openedDays": 6, "lastMovedDays": 0 },
+    { "key": "GRW-455", "team": "team-growth", "sprintId": "sprint-q2-w17-grw", "assigneeId": "eng-yuki",    "title": "Duplicate events in pipeline",     "status": "In Progress","type": "bug",      "priority": "High", "openedDays": 8, "lastMovedDays": 4 },
+    { "key": "GRW-457", "team": "team-growth", "sprintId": "sprint-q2-w17-grw", "assigneeId": "eng-natalie", "title": "SQL-based feature flag eval",      "status": "In Review",  "type": "feature",  "priority": "Medium","openedDays": 4, "lastMovedDays": 0 },
+    { "key": "GRW-459", "team": "team-growth", "sprintId": "sprint-q2-w17-grw", "assigneeId": "eng-ravi",    "title": "Q2 OKR planning",                  "status": "Done",       "type": "chore",    "priority": "Low",  "openedDays": 14,"lastMovedDays": 0 }
+  ]
+}

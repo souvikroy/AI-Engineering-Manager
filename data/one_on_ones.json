@@ -1,0 +1,19 @@
+{
+  "history": [
+    { "engineerId": "eng-amir",   "date": "2026-04-22", "topics": "Scope of gateway v2 RFC; promotion path to L8.", "commitments": "Amir: draft RFC by 4-30. EM: facilitate review with VP Eng.", "sentiment": "engaged",        "notes": "Confident; wants more strategy ownership." },
+    { "engineerId": "eng-priya",  "date": "2026-04-22", "topics": "JWT rotation rollout, time off in May.", "commitments": "Priya: roll to 100% by 5-3. EM: cover on-call 5-12 to 5-19.", "sentiment": "focused",        "notes": "Heads down; no concerns surfaced." },
+    { "engineerId": "eng-marco",  "date": "2026-04-15", "topics": "Workload, mentorship of Deepak.", "commitments": "Marco: pair with Deepak twice/week. EM: reassign one ticket if marco overloaded.", "sentiment": "stretched",      "notes": "Mentioned working past 10pm last week. Watch for burnout." },
+    { "engineerId": "eng-jen",    "date": "2026-04-15", "topics": "Career level conversation; PR throughput.", "commitments": "Jen: lead one cross-team initiative this quarter.", "sentiment": "uncertain",      "notes": "Wants L6 — needs more visible impact." },
+    { "engineerId": "eng-deepak", "date": "2026-04-22", "topics": "Onboarding progress, ramp blockers.", "commitments": "EM: get Deepak a paired-buddy for k8s setup.", "sentiment": "frustrated_quiet","notes": "Said 'fine' but tone said otherwise. Action: check in mid-week." },
+    { "engineerId": "eng-sara",   "date": "2026-04-22", "topics": "Release stress; team headcount.", "commitments": "Sara: delegate 2 release tasks. EM: open req for senior iOS.", "sentiment": "engaged_tired",  "notes": "Excited about 4.18; tired from cycle." },
+    { "engineerId": "eng-tomas",  "date": "2026-04-22", "topics": "Promo case for L7.", "commitments": "Tomas: lead one architecture review next sprint.", "sentiment": "ambitious",      "notes": "Strong candidate for L7." },
+    { "engineerId": "eng-ling",   "date": "2026-04-15", "topics": "Crash work, on-call rotation.", "commitments": "Ling: write postmortem-lite for Pixel crash even if low-impact.", "sentiment": "focused",        "notes": "Steady, no concerns." },
+    { "engineerId": "eng-aiden",  "date": "2026-04-22", "topics": "Universal links project; growth opportunities.", "commitments": "Aiden: tech-lead a small feature next sprint.", "sentiment": "engaged",        "notes": "Wants stretch responsibility." },
+    { "engineerId": "eng-noor",   "date": "2026-04-29", "topics": "Onboarding week 2.", "commitments": "EM: clean up new-hire env-var doc by 5-2.", "sentiment": "new",            "notes": "Polite, not yet asking for help when stuck." },
+    { "engineerId": "eng-ravi",   "date": "2026-04-22", "topics": "Q2 OKR commitment, growth team headcount.", "commitments": "Ravi: present OKRs to leadership 4-29. EM: open req for senior data eng.", "sentiment": "engaged",        "notes": "Strategic mode." },
+    { "engineerId": "eng-elena",  "date": "2026-04-22", "topics": "Dashboard scope; stakeholder noise.", "commitments": "EM: shield Elena from PM async pings, route through standup.", "sentiment": "interrupted",    "notes": "Lots of context switching." },
+    { "engineerId": "eng-marcus", "date": "2026-04-15", "topics": "Migration scope; doc gaps.", "commitments": "Marcus: file 3 doc bugs against the SDK team.", "sentiment": "frustrated",     "notes": "Frustrated by undocumented APIs but professional." },
+    { "engineerId": "eng-yuki",   "date": "2026-04-22", "topics": "Duplicate events bug; pairing.", "commitments": "EM: pair Yuki with Marcus on Wednesday for 2h.", "sentiment": "stuck",          "notes": "Has been stuck a while; not yet asking but visibly worn." },
+    { "engineerId": "eng-natalie","date": "2026-04-22", "topics": "First PR; ramp pace.", "commitments": "Natalie: publish a question doc weekly.", "sentiment": "eager_anxious",  "notes": "Apologetic; reassure that Go ramp takes time." }
+  ]
+}

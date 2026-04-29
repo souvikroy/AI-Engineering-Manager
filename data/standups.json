@@ -1,0 +1,20 @@
+{
+  "asOf": "2026-04-29",
+  "updates": [
+    { "engineerId": "eng-amir",    "date": "2026-04-29", "yesterday": "Reviewed two design docs for the gateway rewrite, paired with Deepak on rate-limit middleware.", "today": "Drafting RFC for gateway v2 routing layer.", "blockers": "None." },
+    { "engineerId": "eng-priya",   "date": "2026-04-29", "yesterday": "Shipped JWT refresh token rotation. Pushed to canary at 17:00 IST.", "today": "Watching canary metrics, then rolling out to 10%.", "blockers": "Need security review sign-off; Marco hasn't responded since Friday." },
+    { "engineerId": "eng-marco",   "date": "2026-04-29", "yesterday": "Investigated database connection pool exhaustion in prod (no incident yet).", "today": "Continuing investigation; possibly need to revert PR-2284.", "blockers": "Logs aren't structured, hard to trace." },
+    { "engineerId": "eng-jen",     "date": "2026-04-29", "yesterday": "Pulled in dependency upgrade PR #2301 (Express 4 → 5).", "today": "Fixing test breakage from the upgrade.", "blockers": "Tests fail intermittently, unclear if pre-existing flake." },
+    { "engineerId": "eng-deepak",  "date": "2026-04-29", "yesterday": "Tried to set up local k8s cluster for testing service mesh changes.", "today": "Still trying to get local cluster working.", "blockers": "Don't know what minikube version we standardize on; asked in #platform Friday, no response." },
+    { "engineerId": "eng-sara",    "date": "2026-04-29", "yesterday": "Reviewed iOS launch checklist with PM. Resolved one P1 with Apple submission.", "today": "Final QA pass on 4.18 release candidate.", "blockers": "App Store review still pending — submitted 5 days ago." },
+    { "engineerId": "eng-tomas",   "date": "2026-04-29", "yesterday": "Refactored offline cache layer. Tests green.", "today": "Code review for Aiden's deeplink work; then onboard Noor on iOS build pipeline.", "blockers": "None." },
+    { "engineerId": "eng-ling",    "date": "2026-04-29", "yesterday": "Worked on Android crash from FCM v3 migration.", "today": "Continue investigating; possibly Firebase regression.", "blockers": "Reproduced only on Pixel 7a. Need a device." },
+    { "engineerId": "eng-aiden",   "date": "2026-04-29", "yesterday": "Implemented universal links for new sharing flow.", "today": "Writing tests; small UI tweaks.", "blockers": "None." },
+    { "engineerId": "eng-noor",    "date": "2026-04-29", "yesterday": "Onboarding — set up dev env, ran first build.", "today": "Reading the architecture doc Sara shared.", "blockers": "Some env vars missing from the new-hire checklist." },
+    { "engineerId": "eng-ravi",    "date": "2026-04-29", "yesterday": "Q2 OKR review with leadership; finalized growth-loop instrumentation plan.", "today": "Pairing with Marcus on the experimentation framework migration.", "blockers": "None." },
+    { "engineerId": "eng-elena",   "date": "2026-04-29", "yesterday": "Built dashboard for activation funnel.", "today": "Iterating with PM on cohort definitions.", "blockers": "Data warehouse is slow today; queries timing out." },
+    { "engineerId": "eng-marcus",  "date": "2026-04-29", "yesterday": "Migrating experiment SDK from v1 to v2 — about 60% done.", "today": "Continuing migration.", "blockers": "Two experiments use deprecated APIs that aren't documented." },
+    { "engineerId": "eng-yuki",    "date": "2026-04-29", "yesterday": "Investigating duplicate events in analytics pipeline.", "today": "Continuing.", "blockers": "I've been on this for 8 days now and getting stuck — might need a second pair of eyes." },
+    { "engineerId": "eng-natalie", "date": "2026-04-29", "yesterday": "Wrote first PR for SQL-based feature flag flag eval.", "today": "Addressing review comments.", "blockers": "First time writing Go, slow going." }
+  ]
+}

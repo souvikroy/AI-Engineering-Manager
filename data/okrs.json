@@ -1,0 +1,19 @@
+{
+  "quarter": "Q2-2026",
+  "company_objectives": [
+    { "id": "co-1", "objective": "Reach 99.95% gateway availability and cut p99 latency by 30%." },
+    { "id": "co-2", "objective": "Lift mobile crash-free rate to 99.85% and ship 4.18 with universal links." },
+    { "id": "co-3", "objective": "Double experiment velocity with v2 SDK rollout and reliable analytics pipeline." }
+  ],
+  "team_okrs": [
+    { "id": "okr-platform-1", "teamId": "team-platform", "objective": "Gateway reliability + perf",  "keyResults": [ "p99 latency ≤ 350ms", "Error rate ≤ 0.10%", "Ship gateway v2 RFC and prototype" ], "progress": 0.55, "status": "on_track" },
+    { "id": "okr-platform-2", "teamId": "team-platform", "objective": "Tighten auth posture",        "keyResults": [ "JWT refresh rotation at 100%", "MFA coverage ≥ 90% of internal users" ], "progress": 0.70, "status": "on_track" },
+    { "id": "okr-mobile-1",   "teamId": "team-mobile",   "objective": "Reach 99.85% crash-free",     "keyResults": [ "iOS crash-free ≥ 99.85%", "Android crash-free ≥ 99.85%", "Resolve all P1/P2 crash spikes within 48h" ], "progress": 0.40, "status": "at_risk" },
+    { "id": "okr-mobile-2",   "teamId": "team-mobile",   "objective": "Ship 4.18 with universal links","keyResults": [ "Universal links live for 100% of share intents", "4.18 GA by end of week 18" ], "progress": 0.65, "status": "on_track" },
+    { "id": "okr-growth-1",   "teamId": "team-growth",   "objective": "Experiment velocity 2×",      "keyResults": [ "All active experiments on v2 SDK", "Time from idea→exposed users ≤ 4 days", "Self-serve creation by PMs" ], "progress": 0.45, "status": "at_risk" },
+    { "id": "okr-growth-2",   "teamId": "team-growth",   "objective": "Reliable analytics pipeline", "keyResults": [ "Duplicate events ≤ 0.1%", "p99 ingestion < 1500ms", "Query SLA on warehouse < 5s" ], "progress": 0.30, "status": "behind" }
+  ],
+  "uncovered_work": [
+    { "ticket": "PLAT-2310", "reason": "Local k8s setup is dev-experience, not tied to any KR." }
+  ]
+}
