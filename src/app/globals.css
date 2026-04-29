@@ -4,32 +4,136 @@
 
 :root {
   color-scheme: dark;
+  --bg: #0a0a0c;
+}
+
+* {
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 html, body {
-  background: #0b0d12;
-  color: #e6e8ed;
+  background: var(--bg);
+  color: #fafafa;
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-* { border-color: #1f2430; }
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(167, 139, 250, 0.10), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(167, 139, 250, 0.04), transparent 60%);
+}
 
+::selection {
+  background: rgba(167, 139, 250, 0.30);
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); border: 2px solid transparent; background-clip: padding-box; }
+
+.glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+}
+
+.glass-strong {
+  background: rgba(20, 20, 24, 0.72);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+}
+
+.gradient-border {
+  position: relative;
+}
+.gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(167,139,250,0.30), rgba(255,255,255,0.06) 60%, transparent);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.dot-grid {
+  background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.shine {
+  position: relative;
+  overflow: hidden;
+}
+.shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  transform: translateX(-100%);
+  animation: shine 2.5s ease-in-out infinite;
+}
+@keyframes shine {
+  0% { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(100%); }
+}
+
+.prose-thin {
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
 .prose-thin h1, .prose-thin h2, .prose-thin h3 {
-  color: #f5f6f8;
+  color: #fafafa;
   font-weight: 600;
-  margin-top: 1rem;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.01em;
 }
-.prose-thin p { margin: 0.5rem 0; line-height: 1.5; }
-.prose-thin ul { list-style: disc; padding-left: 1.25rem; margin: 0.5rem 0; }
+.prose-thin h1 { font-size: 1.125rem; }
+.prose-thin h2 { font-size: 1rem; }
+.prose-thin h3 { font-size: 0.95rem; }
+.prose-thin p { margin: 0.5rem 0; color: rgba(255,255,255,0.85); }
+.prose-thin ul, .prose-thin ol { padding-left: 1.25rem; margin: 0.5rem 0; }
+.prose-thin ul { list-style: disc; }
+.prose-thin ol { list-style: decimal; }
+.prose-thin li { margin: 0.25rem 0; }
 .prose-thin code {
-  background: #1f2430;
-  padding: 0 4px;
-  border-radius: 3px;
-  font-size: 0.85em;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.84em;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
 }
 .prose-thin pre {
-  background: #12151c;
-  padding: 0.75rem;
-  border: 1px solid #1f2430;
-  border-radius: 6px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 0.85rem;
+  border-radius: 8px;
   overflow-x: auto;
+  margin: 0.75rem 0;
+}
+.prose-thin pre code { background: transparent; border: 0; padding: 0; }
+.prose-thin a { color: #c4b5fd; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: rgba(167,139,250,0.5); }
+.prose-thin strong { color: #fff; font-weight: 600; }
+.prose-thin blockquote {
+  border-left: 2px solid rgba(167,139,250,0.5);
+  padding-left: 0.75rem;
+  margin: 0.5rem 0;
+  color: rgba(255,255,255,0.7);
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
 }

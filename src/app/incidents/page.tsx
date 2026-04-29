@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, Pill } from "@/components/Card";
+import { Card, Pill, SectionHeader } from "@/components/Card";
+import { Button } from "@/components/Button";
+import { Siren, Clock, Loader2, Sparkles, Activity } from "lucide-react";
 
 type Incident = { id: string; title: string; severity: string; status: string; openedAt: string; resolvedAt: string | null; ownerId: string | null; summary: string };
 type Summary = { situation: string; suggestedActions: string[]; suggestedOwner: string | null };
@@ -42,71 +44,152 @@ export default function IncidentsPage() {
     }
   }
 
+  const open = list.filter((i) => i.status === "open");
+  const resolved = list.filter((i) => i.status !== "open");
+
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">Incidents & Interrupts</h1>
-        <p className="text-sm text-muted mt-1">Active alerts, copilot summaries, post-mortems.</p>
+    <div className="space-y-8 animate-fade-in">
+      <header className="space-y-2">
+        <SectionHeader kicker="Interrupt + memory">incident copilot · context restore · auto post-mortem</SectionHeader>
+        <h1 className="text-[28px] font-semibold tracking-tight">Stay coherent under interrupt.</h1>
       </header>
 
-      <Card title="Active and recent incidents">
-        <ul className="space-y-2">
-          {list.map((i) => (
-            <li key={i.id}>
-              <button onClick={() => summarize(i.id)} className={`w-full text-left p-3 border rounded text-sm ${active === i.id ? "border-accent bg-accent/10" : "border-border hover:bg-border"}`}>
-                <div className="flex items-center justify-between">
-                  <span><Pill tone={i.severity === "p1" ? "bad" : i.severity === "p2" ? "warn" : "muted"}>{i.severity.toUpperCase()}</Pill> <b className="ml-2">{i.title}</b></span>
-                  <span className="text-xs text-muted">{i.status} · {i.ownerId ?? "unassigned"}</span>
-                </div>
-                <p className="text-xs text-muted mt-1">{i.summary}</p>
-              </button>
-            </li>
-          ))}
-        </ul>
+      <Card title={`Active alerts (${open.length})`} subtitle="Live operational state" icon={<Activity className="w-4 h-4" strokeWidth={1.75} />}>
+        {open.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border p-6 text-center">
+            <Clock className="w-5 h-5 text-ok mx-auto mb-2" strokeWidth={1.5} />
+            <p className="text-[12.5px] text-ink-dim">All systems steady — no open incidents.</p>
+          </div>
+        ) : (
+          <ul className="space-y-2">
+            {open.map((i) => (
+              <IncidentRow key={i.id} incident={i} active={active === i.id} onClick={() => summarize(i.id)} />
+            ))}
+          </ul>
+        )}
       </Card>
 
+      {resolved.length > 0 && (
+        <Card title="Recent (resolved)" subtitle={`${resolved.length} closed`} icon={<Clock className="w-4 h-4" strokeWidth={1.75} />}>
+          <ul className="space-y-2">
+            {resolved.map((i) => (
+              <IncidentRow key={i.id} incident={i} active={active === i.id} onClick={() => summarize(i.id)} />
+            ))}
+          </ul>
+        </Card>
+      )}
+
       {active && (
-        <Card title={`Incident ${active}`} action={
-          <button onClick={buildPostmortem} disabled={loading !== null} className="bg-accent hover:bg-accent/80 text-white text-xs px-3 py-1.5 rounded disabled:opacity-50">
-            {loading === "postmortem" ? "Working…" : "Generate post-mortem"}
-          </button>
-        }>
-          {!summary ? <p className="text-sm text-muted">{loading === "summary" ? "Summarizing…" : ""}</p> : (
-            <div className="text-sm space-y-3">
+        <Card
+          title={`Incident · ${active}`}
+          subtitle={loading === "summary" ? "Summarizing…" : summary?.situation}
+          icon={<Siren className="w-4 h-4 text-accent" strokeWidth={1.75} />}
+          action={
+            <Button onClick={buildPostmortem} disabled={loading !== null} variant="primary">
+              {loading === "postmortem" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+              {loading === "postmortem" ? "Working" : "Generate post-mortem"}
+            </Button>
+          }
+        >
+          {!summary ? (
+            <div className="flex items-center gap-2 text-[12.5px] text-ink-dim py-2">
+              {loading === "summary" && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              {loading === "summary" ? "Working through telemetry…" : ""}
+            </div>
+          ) : (
+            <div className="space-y-4">
               <div>
-                <h3 className="text-xs uppercase text-muted mb-1">Situation</h3>
-                <p>{summary.situation}</p>
-              </div>
-              <div>
-                <h3 className="text-xs uppercase text-muted mb-1">Suggested actions</h3>
-                <ul className="list-disc pl-5">
-                  {summary.suggestedActions.map((a, i) => <li key={i}>{a}</li>)}
+                <div className="text-[10.5px] uppercase tracking-[0.18em] text-ink-faint font-medium mb-1.5">Suggested actions</div>
+                <ul className="space-y-1.5">
+                  {summary.suggestedActions.map((a, i) => (
+                    <li key={i} className="text-[13px] text-ink/90 flex gap-2">
+                      <span className="text-accent shrink-0 font-mono text-[11px] tabular-nums mt-0.5">{String(i + 1).padStart(2, "0")}</span>
+                      {a}
+                    </li>
+                  ))}
                 </ul>
               </div>
-              {summary.suggestedOwner && (<p className="text-xs text-muted">Suggested owner: <span className="font-mono text-accent">{summary.suggestedOwner}</span></p>)}
+              {summary.suggestedOwner && (
+                <p className="text-[12px] text-ink-dim">
+                  Suggested owner: <span className="font-mono text-accent">{summary.suggestedOwner}</span>
+                </p>
+              )}
             </div>
           )}
 
           {postmortem && (
-            <div className="mt-5 border-t border-border pt-4 text-sm space-y-3">
-              <div>
-                <h3 className="text-xs uppercase text-muted mb-1">Timeline</h3>
-                <pre className="whitespace-pre-wrap text-xs bg-bg border border-border rounded p-3">{postmortem.timeline}</pre>
-              </div>
-              <div>
-                <h3 className="text-xs uppercase text-muted mb-1">Root cause</h3>
-                <p>{postmortem.rootCause}</p>
-              </div>
-              <div>
-                <h3 className="text-xs uppercase text-muted mb-1">Action items</h3>
-                <ul className="list-disc pl-5">
-                  {postmortem.actionItems.map((a, i) => <li key={i}>{a}</li>)}
+            <div className="mt-6 pt-5 border-t border-border space-y-4 animate-slide-up">
+              <Block kicker="Timeline">
+                <pre className="whitespace-pre-wrap text-[12px] bg-bg-elevated/60 border border-border rounded-lg p-3 font-mono text-ink/90">{postmortem.timeline}</pre>
+              </Block>
+              <Block kicker="Root cause">
+                <p className="text-[13px] text-ink/90 leading-relaxed">{postmortem.rootCause}</p>
+              </Block>
+              <Block kicker="Action items">
+                <ul className="space-y-1.5">
+                  {postmortem.actionItems.map((a, i) => (
+                    <li key={i} className="text-[12.5px] text-ink/90 flex gap-2">
+                      <span className="text-accent shrink-0">▸</span>
+                      {a}
+                    </li>
+                  ))}
                 </ul>
-              </div>
+              </Block>
             </div>
           )}
         </Card>
       )}
+    </div>
+  );
+}
+
+function IncidentRow({ incident, active, onClick }: { incident: Incident; active: boolean; onClick: () => void }) {
+  return (
+    <li>
+      <button
+        onClick={onClick}
+        className={`w-full text-left p-3 rounded-lg border transition-all ${
+          active
+            ? "border-accent/40 bg-accent/[0.06]"
+            : "border-border bg-surface hover:bg-surface-hover hover:border-border-strong"
+        }`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-2.5 min-w-0">
+            <span
+              className={`mt-1 w-2 h-2 rounded-full shrink-0 ${
+                incident.status === "open"
+                  ? incident.severity === "p1"
+                    ? "bg-bad animate-pulse-soft"
+                    : incident.severity === "p2"
+                    ? "bg-warn animate-pulse-soft"
+                    : "bg-ink-faint animate-pulse-soft"
+                  : "bg-ok"
+              }`}
+            />
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Pill tone={incident.severity === "p1" ? "bad" : incident.severity === "p2" ? "warn" : "muted"} size="xs">
+                  {incident.severity.toUpperCase()}
+                </Pill>
+                <span className="text-[11px] text-ink-faint font-mono">{incident.id}</span>
+              </div>
+              <p className="text-[13px] font-medium text-ink leading-snug">{incident.title}</p>
+              <p className="text-[11.5px] text-ink-faint mt-0.5">{incident.summary}</p>
+            </div>
+          </div>
+          <span className="text-[11px] text-ink-faint shrink-0">{incident.ownerId ?? "unassigned"}</span>
+        </div>
+      </button>
+    </li>
+  );
+}
+
+function Block({ kicker, children }: { kicker: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-[10.5px] uppercase tracking-[0.18em] text-ink-faint font-medium mb-1.5">{kicker}</div>
+      {children}
     </div>
   );
 }
