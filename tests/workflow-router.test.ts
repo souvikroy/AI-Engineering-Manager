@@ -22,10 +22,10 @@ function pr(partial: Partial<GitHubPR>): GitHubPR {
   };
 }
 
-const ALWAYS = [1, 2, 3, 14, 15, 19, 20, 21];
+const ALWAYS = [1, 2, 3, 6, 7, 14, 15, 16, 17, 19, 20, 21];
 
 describe("workflow-router", () => {
-  it("always includes the eight always-on workflows", () => {
+  it("always includes the always-on workflows", () => {
     const w = selectWorkflows("chore", pr({}));
     for (const a of ALWAYS) expect(w).toContain(a);
   });

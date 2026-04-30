@@ -71,6 +71,9 @@ async function persist(repo: string, prNumber: number, prTitle: string, review: 
         workflowId: f.workflowId,
         status: f.status,
         severity: f.severity,
+        issue: f.issue ?? "",
+        location: f.location ?? "",
+        fix: f.fix ?? "",
         evidence: f.evidence,
       })),
     });

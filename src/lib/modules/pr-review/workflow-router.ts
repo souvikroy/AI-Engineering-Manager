@@ -1,7 +1,7 @@
 import type { GitHubPR } from "@/lib/adapters/types";
 import type { PRClassification } from "./types";
 
-const ALWAYS = [1, 2, 3, 14, 15, 19, 20, 21];
+const ALWAYS = [1, 2, 3, 6, 7, 14, 15, 16, 17, 19, 20, 21];
 
 export function selectWorkflows(classification: PRClassification, pr: GitHubPR): number[] {
   const set = new Set<number>(ALWAYS);

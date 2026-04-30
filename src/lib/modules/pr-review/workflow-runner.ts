@@ -40,31 +40,48 @@ function buildPRContext(pr: GitHubPR): string {
 
 function buildWorkflowPrompt(workflow: Workflow): string {
   const rules = workflow.rules
-    .map((r) => `${r.id} [${r.enforcement}] ${r.text.replace(/\n/g, " ")}`)
-    .join("\n");
+    .map((r) => `${r.id} [${r.enforcement}] — ${r.text.replace(/\n/g, " ")}`)
+    .join("\n\n");
   return [
     `# Workflow ${workflow.id} — ${workflow.title}`,
     ``,
-    `Rules to evaluate (${workflow.rules.length}):`,
+    `You MUST evaluate ALL ${workflow.rules.length} rules below. Do not skip any. Produce exactly one finding per rule.`,
+    ``,
+    `Rules:`,
     rules,
   ].join("\n");
 }
 
 const SYSTEM_PROMPT = `You are an expert code reviewer at Meta (formerly Facebook) with 20+ years of experience on large-scale platforms.
-You apply the production code-review ruleset mechanically, rule by rule.
-Output is consumed programmatically; respond ONLY with the JSON object specified in the instructions.
+You apply the production code-review ruleset mechanically, rule by rule. Your output is consumed programmatically AND is read by the PR author to fix issues fast — so every failed finding must be specific enough that the author can act in under two minutes without re-reading the diff.
 
-For each rule provided you must produce a finding with:
+For EACH rule provided you produce a finding with these fields:
+
 - ruleId: the rule's ID like "R3.4"
-- status: "pass" | "fail" | "na" (na = not applicable to this PR)
+- status: "pass" | "fail" | "na" (na = rule does not apply to this PR's scope)
 - severity: "blocking" | "warning" | "nit" | "info"
-  - "blocking" only when status is "fail" AND the rule is MUST or MUST NOT
-  - "warning" when SHOULD/SHOULD NOT failed
-  - "nit" for MAY-style or stylistic
-  - "info" when status is "pass" or "na"
-- evidence: ≤ 800 chars quoting the smallest relevant snippet from the PR (file path, line, or quoted text). If "na", explain why in one sentence.
+  - "blocking" ONLY when status is "fail" AND the rule's enforcement is MUST or MUST_NOT
+  - "warning" when status is "fail" AND enforcement is SHOULD or SHOULD_NOT
+  - "nit" when status is "fail" AND enforcement is MAY (style/preference)
+  - "info" whenever status is "pass" or "na"
+- issue: ONE sentence in plain English stating what is wrong. If status is "pass" or "na", state in one sentence why. No filler like "this PR violates...". Lead with the defect: "SQL string is built with template literal interpolation, allowing SQL injection."
+- location: where in the PR the issue lives. Use one of these formats:
+  - "<file path>:<line>" or "<file path>:<startLine>-<endLine>" for code (use the diff hunk @@ line numbers — pick the new-file line, not the old)
+  - "PR description" / "PR title" / "PR labels" / "commit <sha7>" for non-code locations
+  - "" (empty string) only when status is "pass" or "na"
+- fix: a concrete, copy-pasteable next step. Not "consider refactoring" — say what to change. Examples:
+  - "Replace the template-literal SQL with a parameterized query: \`db.query('SELECT * FROM users WHERE id = $1', [userId])\`."
+  - "Add a 'Rollback' section to the PR description with the manual recovery steps; 'revert PR' is not sufficient for a schema migration."
+  - "Wrap the fetch in withTimeout(5000) and add { retries: 3, backoff: 'exponential' } from @/lib/http."
+  Empty string only when status is "pass" or "na".
+- evidence: ≤ 600 chars quoting the smallest relevant snippet from the PR diff or description that proves the finding. Quote verbatim — do not paraphrase. If "na", explain in one sentence why the rule does not apply.
 
-Be conservative: when uncertain, prefer "na" over "fail". Never invent code that is not in the diff.`;
+Hard rules:
+1. Be conservative: when uncertain, prefer "na" over "fail". Never invent code that is not in the diff.
+2. NEVER mark a rule "pass" without having checked the diff for the failure mode it targets.
+3. The fix MUST reference an actual file/symbol/section from this PR, not generic advice.
+4. Severity follows enforcement strictly — a failed MUST is always "blocking", a failed SHOULD is always "warning". No exceptions.
+5. If the same defect violates multiple rules, fail each rule independently with its own location.`;
 
 export async function runWorkflow(workflowId: number, pr: GitHubPR): Promise<WorkflowResult> {
   const ruleset = loadRuleset();
@@ -76,9 +93,9 @@ export async function runWorkflow(workflowId: number, pr: GitHubPR): Promise<Wor
 
   const userInstruction =
     `Evaluate every rule in Workflow ${workflowId} against the PR above.\n\n` +
-    `Return STRICT JSON of shape:\n` +
-    `{ "findings": [ { "ruleId": "R${workflowId}.1", "status": "pass|fail|na", "severity": "blocking|warning|nit|info", "evidence": "..." }, ... ] }\n\n` +
-    `Include exactly one finding per rule (${workflow.rules.length} findings total). Do not add commentary outside the JSON.`;
+    `Return STRICT JSON of this exact shape:\n` +
+    `{\n  "findings": [\n    {\n      "ruleId": "R${workflowId}.1",\n      "status": "pass|fail|na",\n      "severity": "blocking|warning|nit|info",\n      "issue": "<one sentence stating what is wrong, or why the rule passes/does not apply>",\n      "location": "<file path>:<line> | PR description | PR title | PR labels | \\"\\"",\n      "fix": "<concrete, copy-pasteable next step the author can apply, or \\"\\" if status != fail>",\n      "evidence": "<verbatim ≤600-char quote from the diff or description>"\n    }\n  ]\n}\n\n` +
+    `Include exactly one finding per rule — ${workflow.rules.length} findings total, in the same order as the rules above. Do not add commentary outside the JSON.`;
 
   const responseText = await complete({
     model: "reasoning",
@@ -87,7 +104,7 @@ export async function runWorkflow(workflowId: number, pr: GitHubPR): Promise<Wor
       { role: "user", content: cached(prContext + "\n\n" + workflowSpec) },
       { role: "user", content: userInstruction },
     ],
-    maxTokens: 4096,
+    maxTokens: 8000,
     temperature: 0,
   });
 
@@ -99,15 +116,24 @@ function parseFindings(text: string, workflow: Workflow): Finding[] {
   const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
   const match = cleaned.match(/\{[\s\S]*\}/);
   const json = match ? match[0] : cleaned;
+  const stub = (r: { id: string }, reason: string): Finding => ({
+    ruleId: r.id,
+    status: "na",
+    severity: "info",
+    issue: reason,
+    location: "",
+    fix: "",
+    evidence: reason,
+  });
   let parsed: unknown;
   try {
     parsed = JSON.parse(json);
   } catch {
-    return workflow.rules.map((r) => ({ ruleId: r.id, status: "na", severity: "info", evidence: "model returned unparseable output" } as Finding));
+    return workflow.rules.map((r) => stub(r, "model returned unparseable output"));
   }
   const arr = (parsed as { findings?: unknown[] }).findings;
   if (!Array.isArray(arr)) {
-    return workflow.rules.map((r) => ({ ruleId: r.id, status: "na", severity: "info", evidence: "model output missing 'findings' array" } as Finding));
+    return workflow.rules.map((r) => stub(r, "model output missing 'findings' array"));
   }
   const valid: Finding[] = [];
   const seen = new Set<string>();
@@ -120,7 +146,7 @@ function parseFindings(text: string, workflow: Workflow): Finding[] {
   }
   for (const r of workflow.rules) {
     if (!seen.has(r.id)) {
-      valid.push({ ruleId: r.id, status: "na", severity: "info", evidence: "model did not return a finding for this rule" });
+      valid.push(stub(r, "model did not return a finding for this rule"));
     }
   }
   return valid;

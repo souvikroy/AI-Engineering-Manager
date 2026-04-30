@@ -129,6 +129,9 @@ model Finding {
   workflowId Int
   status     String
   severity   String
+  issue      String   @default("")
+  location   String   @default("")
+  fix        String   @default("")
   evidence   String
 }
 

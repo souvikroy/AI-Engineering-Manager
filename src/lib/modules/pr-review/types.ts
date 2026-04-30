@@ -23,6 +23,9 @@ export const FindingSchema = z.object({
   ruleId: z.string().regex(/^R\d+\.\d+$/),
   status: FindingStatusSchema,
   severity: FindingSeveritySchema,
+  issue: z.string().max(400).default(""),
+  location: z.string().max(200).default(""),
+  fix: z.string().max(600).default(""),
   evidence: z.string().max(800),
 });
 export type Finding = z.infer<typeof FindingSchema>;

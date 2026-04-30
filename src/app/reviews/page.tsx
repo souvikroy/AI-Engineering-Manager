@@ -5,7 +5,17 @@ import { Card, Pill, SectionHeader } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { GitPullRequestArrow, Loader2, Sparkles, ExternalLink, ShieldCheck, ShieldX, ShieldAlert, Search } from "lucide-react";
 
-type Finding = { id: string; ruleId: string; workflowId: number; status: string; severity: string; evidence: string };
+type Finding = {
+  id: string;
+  ruleId: string;
+  workflowId: number;
+  status: string;
+  severity: string;
+  issue?: string;
+  location?: string;
+  fix?: string;
+  evidence: string;
+};
 type Review = {
   id: string;
   repo: string;
@@ -169,29 +179,64 @@ export default function ReviewsPage() {
             </a>
           ) : null}
         >
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-2">
-            {active.findings.filter((f) => f.status === "fail").length === 0 ? (
-              <div className="md:col-span-2 lg:col-span-3 rounded-lg border border-dashed border-border p-6 text-center">
-                <ShieldCheck className="w-5 h-5 text-ok mx-auto mb-2" strokeWidth={1.5} />
-                <p className="text-[12.5px] text-ink-dim">No failures.</p>
-              </div>
-            ) : (
-              active.findings
-                .filter((f) => f.status === "fail")
-                .map((f) => (
-                  <div key={f.id} className="rounded-lg border border-border bg-bg/40 p-3">
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <Pill tone={f.severity === "blocking" ? "bad" : f.severity === "warning" ? "warn" : "muted"} size="xs">
-                        {f.severity}
-                      </Pill>
-                      <span className="font-mono text-[11px] text-accent">{f.ruleId}</span>
-                      <span className="text-[10.5px] text-ink-ghost">W{f.workflowId}</span>
-                    </div>
-                    <p className="text-[11.5px] text-ink/90 leading-snug">{f.evidence}</p>
+          {(() => {
+            const fails = active.findings.filter((f) => f.status === "fail");
+            const order = { blocking: 0, warning: 1, nit: 2, info: 3 } as Record<string, number>;
+            const sorted = [...fails].sort((a, b) => (order[a.severity] ?? 9) - (order[b.severity] ?? 9));
+            const counts = {
+              blocking: fails.filter((f) => f.severity === "blocking").length,
+              warning: fails.filter((f) => f.severity === "warning").length,
+              nit: fails.filter((f) => f.severity === "nit").length,
+            };
+            return (
+              <div className="space-y-3">
+                <div className="flex items-center gap-1.5 text-[11px] text-ink-dim">
+                  <Pill tone="bad" size="xs">{counts.blocking} blocking</Pill>
+                  <Pill tone="warn" size="xs">{counts.warning} warning</Pill>
+                  <Pill tone="muted" size="xs">{counts.nit} nit</Pill>
+                  <span className="text-ink-ghost">· {active.findings.length} rules evaluated</span>
+                </div>
+                {sorted.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border p-6 text-center">
+                    <ShieldCheck className="w-5 h-5 text-ok mx-auto mb-2" strokeWidth={1.5} />
+                    <p className="text-[12.5px] text-ink-dim">No failures across {active.findings.length} rules.</p>
                   </div>
-                ))
-            )}
-          </div>
+                ) : (
+                  <ul className="space-y-2">
+                    {sorted.map((f) => (
+                      <li key={f.id} className="rounded-lg border border-border bg-bg/40 p-3.5">
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Pill tone={f.severity === "blocking" ? "bad" : f.severity === "warning" ? "warn" : "muted"} size="xs">
+                            {f.severity}
+                          </Pill>
+                          <span className="font-mono text-[11px] text-accent">{f.ruleId}</span>
+                          <span className="text-[10.5px] text-ink-ghost">W{f.workflowId}</span>
+                          {f.location && (
+                            <span className="ml-auto font-mono text-[10.5px] text-ink-faint truncate max-w-[55%]" title={f.location}>
+                              {f.location}
+                            </span>
+                          )}
+                        </div>
+                        {f.issue && <p className="text-[12.5px] text-ink leading-snug mb-1.5">{f.issue}</p>}
+                        {f.fix && (
+                          <div className="text-[11.5px] text-ink-dim leading-snug mb-1.5">
+                            <span className="text-accent font-medium">Fix · </span>
+                            {f.fix}
+                          </div>
+                        )}
+                        {f.evidence && (
+                          <details className="text-[11px] text-ink-faint">
+                            <summary className="cursor-pointer text-ink-ghost hover:text-ink-dim">evidence</summary>
+                            <pre className="mt-1.5 whitespace-pre-wrap font-mono text-[10.5px] text-ink-faint border-l-2 border-border pl-2">{f.evidence}</pre>
+                          </details>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            );
+          })()}
         </Card>
       )}
     </div>

@@ -6,7 +6,7 @@ function result(workflowId: number, findings: { ruleId: string; status: "pass" |
   return {
     workflowId,
     workflowTitle: `Workflow ${workflowId}`,
-    findings: findings.map((f) => ({ ...f, evidence: f.evidence ?? "" })),
+    findings: findings.map((f) => ({ ...f, issue: "", location: "", fix: "", evidence: f.evidence ?? "" })),
   };
 }
 
