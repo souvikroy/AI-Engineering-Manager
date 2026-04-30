@@ -2,35 +2,49 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// NOTE: Phase 1 keeps `provider = "sqlite"` so the running mock-data app continues to work
+// during the Postgres+pgvector migration. When ready to flip to Neon:
+//   1. Set DATABASE_URL to the Neon URL
+//   2. Change provider to "postgresql" and add `schemas = ["app"]`
+//   3. Add `@@schema("app")` to every model below
+//   4. Run `npx prisma migrate dev --name postgres_app_schema`
+// All models already carry workspaceId (nullable) so the migration is shape-stable.
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model Team {
-  id        String     @id
-  name      String
-  mission   String
-  engineers Engineer[]
-  okrs      OKR[]
+  id          String     @id
+  workspaceId String?
+  name        String
+  mission     String
+  engineers   Engineer[]
+  okrs        OKR[]
+
+  @@index([workspaceId])
 }
 
 model Engineer {
-  id            String       @id
-  name          String
-  role          String
-  level         String
-  teamId        String
-  team          Team         @relation(fields: [teamId], references: [id])
-  joinedAt      DateTime
-  slackHandle   String
-  githubHandle  String
-  oneOnOnes     OneOnOne[]
+  id             String     @id
+  workspaceId    String?
+  name           String
+  role           String
+  level          String
+  teamId         String
+  team           Team       @relation(fields: [teamId], references: [id])
+  joinedAt       DateTime
+  slackHandle    String
+  githubHandle   String
+  oneOnOnes      OneOnOne[]
   ownedIncidents Incident[]
+
+  @@index([workspaceId])
 }
 
 model OneOnOne {
   id          String   @id @default(cuid())
+  workspaceId String?
   engineerId  String
   engineer    Engineer @relation(fields: [engineerId], references: [id])
   date        DateTime
@@ -38,21 +52,27 @@ model OneOnOne {
   commitments String
   sentiment   String
   notes       String
+
+  @@index([workspaceId])
 }
 
 model DesignDoc {
-  id        String     @id @default(cuid())
-  title     String
-  author    String
-  content   String
-  tags      String
-  status    String
-  createdAt DateTime   @default(now())
-  decisions Decision[]
+  id          String     @id @default(cuid())
+  workspaceId String?
+  title       String
+  author      String
+  content     String
+  tags        String
+  status      String
+  createdAt   DateTime   @default(now())
+  decisions   Decision[]
+
+  @@index([workspaceId])
 }
 
 model Decision {
   id          String     @id @default(cuid())
+  workspaceId String?
   designDocId String?
   designDoc   DesignDoc? @relation(fields: [designDocId], references: [id])
   title       String
@@ -63,10 +83,13 @@ model Decision {
   tradeoffs   String
   tags        String
   createdAt   DateTime   @default(now())
+
+  @@index([workspaceId])
 }
 
 model Incident {
   id          String       @id
+  workspaceId String?
   title       String
   severity    String
   status      String
@@ -77,38 +100,50 @@ model Incident {
   owner       Engineer?    @relation(fields: [ownerId], references: [id])
   alerts      String
   postmortems Postmortem[]
+
+  @@index([workspaceId])
 }
 
 model Postmortem {
   id          String   @id @default(cuid())
+  workspaceId String?
   incidentId  String
   incident    Incident @relation(fields: [incidentId], references: [id])
   timeline    String
   rootCause   String
   actionItems String
   createdAt   DateTime @default(now())
+
+  @@index([workspaceId])
 }
 
 model OKR {
-  id         String  @id
-  teamId     String
-  team       Team    @relation(fields: [teamId], references: [id])
-  objective  String
-  keyResults String
-  progress   Float
-  quarter    String
-  status     String
+  id          String @id
+  workspaceId String?
+  teamId      String
+  team        Team   @relation(fields: [teamId], references: [id])
+  objective   String
+  keyResults  String
+  progress    Float
+  quarter     String
+  status      String
+
+  @@index([workspaceId])
 }
 
 model BriefSnapshot {
-  id        String   @id @default(cuid())
-  date      DateTime
-  content   String
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  workspaceId String?
+  date        DateTime
+  content     String
+  createdAt   DateTime @default(now())
+
+  @@index([workspaceId, createdAt])
 }
 
 model PRReview {
   id               String    @id @default(cuid())
+  workspaceId      String?
   repo             String
   prNumber         Int
   prTitle          String
@@ -119,26 +154,34 @@ model PRReview {
   postedCommentUrl String?
   createdAt        DateTime  @default(now())
   findings         Finding[]
+
+  @@index([workspaceId, createdAt])
 }
 
 model Finding {
-  id         String   @id @default(cuid())
-  prReviewId String
-  prReview   PRReview @relation(fields: [prReviewId], references: [id])
-  ruleId     String
-  workflowId Int
-  status     String
-  severity   String
-  issue      String   @default("")
-  location   String   @default("")
-  fix        String   @default("")
-  evidence   String
+  id          String   @id @default(cuid())
+  workspaceId String?
+  prReviewId  String
+  prReview    PRReview @relation(fields: [prReviewId], references: [id])
+  ruleId      String
+  workflowId  Int
+  status      String
+  severity    String
+  issue       String   @default("")
+  location    String   @default("")
+  fix         String   @default("")
+  evidence    String
+
+  @@index([workspaceId])
 }
 
 model ChatSession {
-  id        String   @id @default(cuid())
-  title     String
-  messages  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  workspaceId String?
+  title       String
+  messages    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([workspaceId, updatedAt])
 }

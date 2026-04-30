@@ -20,6 +20,17 @@ type Engineer = {
 };
 
 async function main() {
+  // SAFETY: never wipe production data. Real ingest writes will land in BriefSnapshot,
+  // PRReview, Finding, Postmortem etc. once Phase 3+ ships. Require an explicit --demo
+  // flag or non-production env to allow the destructive reset.
+  const allowReset =
+    process.env.NODE_ENV !== "production" || process.argv.includes("--demo");
+  if (!allowReset) {
+    throw new Error(
+      "prisma/seed.ts refuses to deleteMany() in NODE_ENV=production. Re-run with --demo if you really mean to reset.",
+    );
+  }
+
   await prisma.finding.deleteMany();
   await prisma.pRReview.deleteMany();
   await prisma.postmortem.deleteMany();
