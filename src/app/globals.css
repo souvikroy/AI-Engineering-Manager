@@ -4,11 +4,12 @@
 
 :root {
   color-scheme: dark;
-  --bg: #0a0a0c;
+  --bg: #08080b;
+  --bg-deep: #050507;
 }
 
 * {
-  border-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.06);
 }
 
 html, body {
@@ -19,6 +20,7 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Atmospheric background — deep + soft purple aurora + subtle grain */
 body::before {
   content: "";
   position: fixed;
@@ -26,31 +28,32 @@ body::before {
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(167, 139, 250, 0.10), transparent 70%),
-    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(167, 139, 250, 0.04), transparent 60%);
+    radial-gradient(ellipse 70% 50% at 50% -10%, rgba(167, 139, 250, 0.13), transparent 60%),
+    radial-gradient(ellipse 50% 40% at 110% 100%, rgba(244, 114, 182, 0.06), transparent 60%),
+    radial-gradient(ellipse 50% 35% at -10% 80%, rgba(94, 234, 212, 0.04), transparent 60%);
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 }
 
 ::selection {
-  background: rgba(167, 139, 250, 0.30);
+  background: rgba(167, 139, 250, 0.32);
 }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); border: 2px solid transparent; background-clip: padding-box; }
 
-.glass {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(12px) saturate(140%);
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
-}
-
-.glass-strong {
-  background: rgba(20, 20, 24, 0.72);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
-}
-
+/* Sheen border — used on premium surfaces */
 .gradient-border {
   position: relative;
 }
@@ -60,11 +63,16 @@ body::before {
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, rgba(167,139,250,0.30), rgba(255,255,255,0.06) 60%, transparent);
+  background: linear-gradient(135deg, rgba(167,139,250,0.40), rgba(244,114,182,0.16) 35%, rgba(255,255,255,0.04) 65%, transparent 100%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
+}
+
+/* Hairline border on all sides for cards over deep bg */
+.hairline {
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
 }
 
 .dot-grid {
@@ -72,6 +80,7 @@ body::before {
   background-size: 20px 20px;
 }
 
+/* Live shimmer for empty CTA strips */
 .shine {
   position: relative;
   overflow: hidden;
@@ -80,30 +89,84 @@ body::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent);
   transform: translateX(-100%);
-  animation: shine 2.5s ease-in-out infinite;
+  animation: shine 2.6s ease-in-out infinite;
 }
 @keyframes shine {
   0% { transform: translateX(-100%); }
   60%, 100% { transform: translateX(100%); }
 }
 
+/* Display text gradient — "Engineering pulse," */
+.text-gradient-ink {
+  background: linear-gradient(180deg, #ffffff 0%, rgba(255,255,255,0.62) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.text-gradient-accent {
+  background: linear-gradient(135deg, #c4b5fd 0%, #a78bfa 45%, #f472b6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Pulsing live dot */
+.live-dot {
+  position: relative;
+  display: inline-flex;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+.live-dot::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.35;
+  animation: pulse-ring 2s ease-out infinite;
+}
+@keyframes pulse-ring {
+  0% { transform: scale(0.95); opacity: 0.5; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+/* KBD chip */
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  padding: 0 5px;
+  height: 18px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.06);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10), 0 1px 0 0 rgba(0,0,0,0.4);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10px;
+  color: rgba(255,255,255,0.75);
+  letter-spacing: 0.02em;
+}
+
+/* Markdown body */
 .prose-thin {
   font-size: 0.875rem;
-  line-height: 1.6;
+  line-height: 1.65;
 }
 .prose-thin h1, .prose-thin h2, .prose-thin h3 {
   color: #fafafa;
   font-weight: 600;
   margin-top: 1.25rem;
   margin-bottom: 0.5rem;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.012em;
 }
 .prose-thin h1 { font-size: 1.125rem; }
 .prose-thin h2 { font-size: 1rem; }
 .prose-thin h3 { font-size: 0.95rem; }
-.prose-thin p { margin: 0.5rem 0; color: rgba(255,255,255,0.85); }
+.prose-thin p { margin: 0.5rem 0; color: rgba(255,255,255,0.88); }
 .prose-thin ul, .prose-thin ol { padding-left: 1.25rem; margin: 0.5rem 0; }
 .prose-thin ul { list-style: disc; }
 .prose-thin ol { list-style: decimal; }
@@ -117,7 +180,7 @@ body::before {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
 }
 .prose-thin pre {
-  background: rgba(0,0,0,0.4);
+  background: rgba(0,0,0,0.45);
   border: 1px solid rgba(255,255,255,0.08);
   padding: 0.85rem;
   border-radius: 8px;
@@ -128,12 +191,13 @@ body::before {
 .prose-thin a { color: #c4b5fd; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: rgba(167,139,250,0.5); }
 .prose-thin strong { color: #fff; font-weight: 600; }
 .prose-thin blockquote {
-  border-left: 2px solid rgba(167,139,250,0.5);
+  border-left: 2px solid rgba(167,139,250,0.55);
   padding-left: 0.75rem;
   margin: 0.5rem 0;
-  color: rgba(255,255,255,0.7);
+  color: rgba(255,255,255,0.72);
 }
 
 @layer utilities {
   .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
 }

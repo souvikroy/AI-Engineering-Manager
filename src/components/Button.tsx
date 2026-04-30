@@ -2,7 +2,7 @@
 
 import { ButtonHTMLAttributes, ReactNode } from "react";
 
-type Variant = "primary" | "secondary" | "ghost";
+type Variant = "primary" | "secondary" | "ghost" | "outline";
 
 export function Button({
   variant = "primary",
@@ -10,12 +10,18 @@ export function Button({
   children,
   className = "",
   ...rest
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: "xs" | "sm" | "md"; children: ReactNode }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: Variant;
+  size?: "xs" | "sm" | "md";
+  children: ReactNode;
+}) {
   const variants: Record<Variant, string> = {
     primary:
-      "bg-accent text-bg hover:bg-accent/90 shadow-[0_0_0_1px_rgba(167,139,250,0.35),0_8px_20px_-8px_rgba(167,139,250,0.40)] disabled:bg-accent/40",
+      "bg-ink text-bg hover:bg-white shadow-soft-lift disabled:bg-ink/40 disabled:shadow-none",
     secondary:
-      "bg-white/[0.06] text-ink hover:bg-white/[0.10] ring-1 ring-inset ring-white/[0.08] hover:ring-white/[0.14]",
+      "bg-white/[0.06] text-ink hover:bg-white/[0.10] ring-1 ring-inset ring-white/[0.08] hover:ring-white/[0.16]",
+    outline:
+      "bg-transparent text-ink ring-1 ring-inset ring-border-strong hover:ring-accent/40 hover:bg-accent/[0.04]",
     ghost: "text-ink-dim hover:text-ink hover:bg-surface",
   };
   const sizes: Record<string, string> = {
@@ -26,7 +32,7 @@ export function Button({
   return (
     <button
       {...rest}
-      className={`inline-flex items-center gap-1.5 rounded-md font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-lg font-medium tracking-tight2 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] ${variants[variant]} ${sizes[size]} ${className}`}
     >
       {children}
     </button>
