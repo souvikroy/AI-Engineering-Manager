@@ -1,4 +1,4 @@
-# Code Review Rule Set — Production Standard
+# Code Review Rule Set — Production Standard 
 
 **Author voice:** Engineering Manager, ex-Facebook (20+ yrs), large-scale application platforms.
 **Audience:** Authors and reviewers of GitHub PRs in a production codebase.
