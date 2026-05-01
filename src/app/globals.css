@@ -4,8 +4,8 @@
 
 :root {
   color-scheme: dark;
-  --bg: #08080b;
-  --bg-deep: #050507;
+  --bg: #0c0a08;
+  --bg-deep: #070605;
 }
 
 * {
@@ -20,7 +20,7 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Atmospheric background — deep + soft purple aurora + subtle grain */
+/* Atmospheric background — warm charcoal + soft amber vignette + subtle grain */
 body::before {
   content: "";
   position: fixed;
@@ -28,9 +28,9 @@ body::before {
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(ellipse 70% 50% at 50% -10%, rgba(167, 139, 250, 0.13), transparent 60%),
-    radial-gradient(ellipse 50% 40% at 110% 100%, rgba(244, 114, 182, 0.06), transparent 60%),
-    radial-gradient(ellipse 50% 35% at -10% 80%, rgba(94, 234, 212, 0.04), transparent 60%);
+    radial-gradient(ellipse 70% 50% at 50% -10%, rgba(251, 146, 60, 0.10), transparent 60%),
+    radial-gradient(ellipse 50% 40% at 110% 100%, rgba(253, 230, 138, 0.05), transparent 60%),
+    radial-gradient(ellipse 50% 35% at -10% 80%, rgba(251, 191, 36, 0.04), transparent 60%);
 }
 
 body::after {
@@ -45,7 +45,7 @@ body::after {
 }
 
 ::selection {
-  background: rgba(167, 139, 250, 0.32);
+  background: rgba(251, 146, 60, 0.32);
 }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
@@ -63,7 +63,7 @@ body::after {
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, rgba(167,139,250,0.40), rgba(244,114,182,0.16) 35%, rgba(255,255,255,0.04) 65%, transparent 100%);
+  background: linear-gradient(135deg, rgba(251,146,60,0.40), rgba(253,230,138,0.16) 35%, rgba(255,255,255,0.04) 65%, transparent 100%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -106,7 +106,7 @@ body::after {
   color: transparent;
 }
 .text-gradient-accent {
-  background: linear-gradient(135deg, #c4b5fd 0%, #a78bfa 45%, #f472b6 100%);
+  background: linear-gradient(135deg, #fde68a 0%, #fdba74 45%, #fb923c 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -188,10 +188,10 @@ body::after {
   margin: 0.75rem 0;
 }
 .prose-thin pre code { background: transparent; border: 0; padding: 0; }
-.prose-thin a { color: #c4b5fd; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: rgba(167,139,250,0.5); }
+.prose-thin a { color: #fdba74; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: rgba(251,146,60,0.5); }
 .prose-thin strong { color: #fff; font-weight: 600; }
 .prose-thin blockquote {
-  border-left: 2px solid rgba(167,139,250,0.55);
+  border-left: 2px solid rgba(251,146,60,0.55);
   padding-left: 0.75rem;
   margin: 0.5rem 0;
   color: rgba(255,255,255,0.72);

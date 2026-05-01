@@ -10,9 +10,9 @@ const config: Config = {
       },
       colors: {
         bg: {
-          DEFAULT: "#08080b",
-          elevated: "#0d0d10",
-          deep: "#050507",
+          DEFAULT: "#0c0a08",
+          elevated: "#15110d",
+          deep: "#070605",
         },
         surface: {
           DEFAULT: "rgba(255,255,255,0.025)",
@@ -22,7 +22,7 @@ const config: Config = {
         border: {
           DEFAULT: "rgba(255,255,255,0.06)",
           strong: "rgba(255,255,255,0.12)",
-          accent: "rgba(167,139,250,0.30)",
+          accent: "rgba(251,146,60,0.32)",
         },
         ink: {
           DEFAULT: "#fafafa",
@@ -31,13 +31,13 @@ const config: Config = {
           ghost: "rgba(255,255,255,0.22)",
         },
         accent: {
-          DEFAULT: "#a78bfa",
-          hot: "#c4b5fd",
-          glow: "rgba(167,139,250,0.18)",
-          edge: "rgba(167,139,250,0.45)",
+          DEFAULT: "#fb923c",
+          hot: "#fdba74",
+          glow: "rgba(251,146,60,0.18)",
+          edge: "rgba(251,146,60,0.45)",
         },
         signal: {
-          pink: "#f472b6",
+          pink: "#fde68a",
           teal: "#5eead4",
           amber: "#fbbf24",
         },
@@ -52,11 +52,11 @@ const config: Config = {
       },
       backgroundImage: {
         "grid-fade":
-          "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(167,139,250,0.10), transparent 70%)",
+          "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(251,146,60,0.10), transparent 70%)",
         "shimmer":
           "linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)",
         "accent-gradient":
-          "linear-gradient(135deg, #a78bfa 0%, #f472b6 60%, #fbbf24 100%)",
+          "linear-gradient(135deg, #fb923c 0%, #fdba74 55%, #fde68a 100%)",
         "ink-gradient":
           "linear-gradient(180deg, #ffffff 0%, rgba(255,255,255,0.55) 100%)",
       },
@@ -95,11 +95,11 @@ const config: Config = {
         },
       },
       boxShadow: {
-        glow: "0 0 0 1px rgba(167,139,250,0.32), 0 8px 28px -8px rgba(167,139,250,0.32)",
+        glow: "0 0 0 1px rgba(251,146,60,0.32), 0 8px 28px -8px rgba(251,146,60,0.32)",
         "soft-lift":
           "0 1px 0 0 rgba(255,255,255,0.04) inset, 0 8px 32px -16px rgba(0,0,0,0.6)",
         "ring-accent":
-          "0 0 0 1px rgba(167,139,250,0.35), 0 0 24px -4px rgba(167,139,250,0.30)",
+          "0 0 0 1px rgba(251,146,60,0.35), 0 0 24px -4px rgba(251,146,60,0.30)",
       },
     },
   },

@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ArrowUp, Loader2, Target, Brain, BarChart3, Siren } from "lucide-react";
 import { Kbd } from "@/components/Card";
-import { BrandMark } from "@/components/BrandLogo";
+import { BrandMark, MascotHero } from "@/components/BrandLogo";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -95,8 +95,8 @@ export default function ChatPage() {
           {/* Hero */}
           <div className="text-center max-w-2xl mx-auto mb-10 animate-rise">
             <div className="inline-flex relative mb-6">
-              <BrandMark size={56} />
-              <div className="absolute inset-0 blur-2xl opacity-30 -z-10 bg-[#d9f871]" />
+              <MascotHero size={140} />
+              <div className="absolute inset-0 blur-3xl opacity-40 -z-10 bg-accent" />
             </div>
             <h1 className="text-[40px] font-semibold tracking-display leading-[1.05] mb-3 text-balance">
               <span className="text-gradient-ink">What's on your mind,</span>

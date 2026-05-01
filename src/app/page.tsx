@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { FreshnessPill } from "@/components/FreshnessPill";
+import { MascotHero } from "@/components/BrandLogo";
 
 export const dynamic = "force-dynamic";
 
@@ -40,27 +41,32 @@ export default async function Dashboard() {
     <div className="space-y-10 animate-fade-in">
       {/* Hero */}
       <header className="relative">
-        <div className="flex items-end justify-between gap-6">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-[11px] text-ink-faint">
-              <span className="live-dot text-ok">
-                <span className="block w-2 h-2 rounded-full bg-ok" />
-              </span>
-              <span className="uppercase tracking-kicker font-medium">Live</span>
-              <span className="text-ink-ghost">·</span>
-              <span>{today}</span>
+        <div className="flex items-end justify-between gap-8">
+          <div className="flex items-center gap-6 min-w-0 flex-1">
+            <div className="hidden md:block shrink-0">
+              <MascotHero size={132} />
             </div>
-            <h1 className="text-[44px] font-semibold tracking-display leading-[1.04] text-balance">
-              <span className="text-gradient-ink">Engineering pulse,</span>
-              <br />
-              <span className="text-gradient-accent">at a glance.</span>
-            </h1>
-            <p className="text-[14px] text-ink-dim max-w-xl text-pretty">
-              One synthesis from standups, Jira, Slack, monitoring, and on-call —
-              so you walk into every leadership sync already aligned.
-            </p>
-            <div className="pt-1">
-              <FreshnessPill />
+            <div className="space-y-3 min-w-0">
+              <div className="flex items-center gap-2 text-[11px] text-ink-faint">
+                <span className="live-dot text-ok">
+                  <span className="block w-2 h-2 rounded-full bg-ok" />
+                </span>
+                <span className="uppercase tracking-kicker font-medium">Live</span>
+                <span className="text-ink-ghost">·</span>
+                <span>{today}</span>
+              </div>
+              <h1 className="text-[44px] font-semibold tracking-display leading-[1.04] text-balance">
+                <span className="text-gradient-ink">Engineering pulse,</span>
+                <br />
+                <span className="text-gradient-accent">at a glance.</span>
+              </h1>
+              <p className="text-[14px] text-ink-dim max-w-xl text-pretty">
+                One synthesis from standups, Jira, Slack, monitoring, and on-call —
+                so you walk into every leadership sync already aligned.
+              </p>
+              <div className="pt-1">
+                <FreshnessPill />
+              </div>
             </div>
           </div>
           <RegenerateButton

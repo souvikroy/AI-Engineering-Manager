@@ -13,7 +13,7 @@ import {
   Search,
 } from "lucide-react";
 import { FreshnessPill } from "./FreshnessPill";
-import { BrandMark } from "./BrandLogo";
+import { BrandWordmark } from "./BrandLogo";
 
 type NavItem = { href: string; label: string; icon: typeof LayoutDashboard; group: "primary" | "ops"; hint?: string };
 
@@ -41,7 +41,7 @@ export function Sidebar() {
             ${active ? "bg-surface-strong text-ink" : "text-ink-dim hover:bg-surface hover:text-ink"}`}
         >
           {active && (
-            <span className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-full bg-accent shadow-[0_0_8px_rgba(167,139,250,0.7)]" />
+            <span className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-full bg-accent shadow-[0_0_8px_rgba(251,146,60,0.7)]" />
           )}
           <Icon className="w-[15px] h-[15px]" strokeWidth={1.75} />
           <span className="flex-1 tracking-tight2">{item.label}</span>
@@ -59,17 +59,7 @@ export function Sidebar() {
     <aside className="fixed inset-y-0 left-0 w-[244px] flex flex-col border-r border-border bg-bg/70 backdrop-blur-xl z-20">
       {/* Brand */}
       <div className="px-5 pt-6 pb-5">
-        <div className="flex items-center gap-2.5">
-          <BrandMark size={28} />
-          <div className="leading-none flex items-baseline gap-1">
-            <span className="text-[16px] font-semibold tracking-tight2 text-ink">
-              CTO
-            </span>
-            <span className="text-[16px] font-semibold tracking-tight2 text-ink">
-              Brain
-            </span>
-          </div>
-        </div>
+        <BrandWordmark size={30} />
       </div>
 
       {/* Search / Command */}

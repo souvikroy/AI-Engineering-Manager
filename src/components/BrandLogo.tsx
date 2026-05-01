@@ -1,60 +1,82 @@
-/**
- * Brand mark — downward white triangle with a chartreuse edge.
- *
- * Brand-agnostic file name + exports: future renames swap text only, never imports.
- *
- *  - <BrandMark/>      icon-only, scales by `size`
- *  - <BrandWordmark/>  mark + wordmark on a single baseline
- */
+import Image from "next/image";
+
+const LOGO_SRC = "/cto-brain-logo.png";
 
 type MarkProps = {
   size?: number;
   className?: string;
-  /** Override stroke color. Default is the chartreuse edge from the brand. */
-  edge?: string;
-  /** Override fill. Default white. */
-  fill?: string;
-  /** Subtle drop-shadow halo on dark surfaces. */
   glow?: boolean;
 };
 
-export function BrandMark({
-  size = 32,
-  className = "",
-  edge = "#d9f871",
-  fill = "#ffffff",
-  glow = true,
-}: MarkProps) {
-  const filterId = `brand-glow-${size}`;
+export function BrandMark({ size = 32, className = "", glow = false }: MarkProps) {
   return (
-    <svg
-      viewBox="0 0 100 100"
-      width={size}
-      height={size}
-      className={className}
-      role="img"
-      aria-label="CTO Brain"
+    <span
+      className={`relative inline-flex shrink-0 ${className}`}
+      style={{ width: size, height: size }}
     >
-      {glow && (
-        <defs>
-          <filter id={filterId} x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur stdDeviation="2.5" result="b" />
-            <feMerge>
-              <feMergeNode in="b" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-      )}
-      <polygon
-        points="8,22 92,22 50,92"
-        fill={fill}
-        stroke={edge}
-        strokeWidth="2.4"
-        strokeLinejoin="round"
-        filter={glow ? `url(#${filterId})` : undefined}
+      <Image
+        src={LOGO_SRC}
+        alt="CTO Brain"
+        width={size}
+        height={size}
+        priority={size >= 64}
+        className="select-none"
+        style={{
+          clipPath: "circle(50%)",
+          filter: glow
+            ? "drop-shadow(0 0 12px rgba(251,146,60,0.55))"
+            : undefined,
+        }}
       />
-    </svg>
+    </span>
+  );
+}
+
+export function MascotHero({
+  size = 200,
+  className = "",
+}: {
+  size?: number;
+  className?: string;
+}) {
+  const halo = Math.round(size * 1.35);
+  return (
+    <span
+      className={`relative inline-flex shrink-0 items-center justify-center ${className}`}
+      style={{ width: size, height: size }}
+    >
+      <span
+        aria-hidden
+        className="absolute inset-0 -z-10 flex items-center justify-center"
+        style={{ width: size, height: size }}
+      >
+        <Image
+          src={LOGO_SRC}
+          alt=""
+          width={halo}
+          height={halo}
+          aria-hidden
+          className="select-none opacity-55"
+          style={{
+            clipPath: "circle(50%)",
+            filter: "blur(38px) saturate(1.4)",
+            transform: `scale(1)`,
+          }}
+        />
+      </span>
+      <Image
+        src={LOGO_SRC}
+        alt="CTO Brain"
+        width={size}
+        height={size}
+        priority
+        className="relative select-none"
+        style={{
+          clipPath: "circle(50%)",
+          filter: "drop-shadow(0 14px 30px rgba(251,146,60,0.35))",
+        }}
+      />
+    </span>
   );
 }
 
@@ -66,15 +88,10 @@ export function BrandWordmark({
   className?: string;
 }) {
   return (
-    <span className={`inline-flex items-center gap-2 ${className}`}>
+    <span className={`inline-flex items-center gap-2.5 ${className}`}>
       <BrandMark size={size} />
-      <span className="leading-none flex items-baseline gap-1">
-        <span className="text-[15px] font-semibold tracking-tight2 text-ink">
-          CTO
-        </span>
-        <span className="text-[15px] font-semibold tracking-tight2 text-ink">
-          Brain
-        </span>
+      <span className="text-[15px] font-semibold tracking-tight2 text-ink leading-none">
+        CTO Brain
       </span>
     </span>
   );

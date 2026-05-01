@@ -5,12 +5,19 @@ import "./globals.css";
 import { Sidebar } from "@/components/Sidebar";
 
 export const metadata: Metadata = {
-  title: "CTO Brain",
-  description: "Decision layer for engineering leadership.",
+  title: "CTO Brain — your AI chief of staff",
+  description:
+    "Decision layer for engineering leadership. One synthesis of standups, OKRs, incidents, and on-call.",
   icons: {
-    icon: "/cto-brain.svg",
-    shortcut: "/cto-brain.svg",
-    apple: "/cto-brain.svg",
+    icon: "/cto-brain-logo.png",
+    shortcut: "/cto-brain-logo.png",
+    apple: "/cto-brain-logo.png",
+  },
+  openGraph: {
+    title: "CTO Brain",
+    description: "Your AI chief of staff for engineering leadership.",
+    images: ["/cto-brain-logo.png"],
+    type: "website",
   },
 };
 
