@@ -7,7 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 SourceLiteral = Literal[
-    "slack", "jira", "linear", "sentry", "confluence", "notion", "gsheet", "github"
+    "slack", "jira", "linear", "sentry", "confluence", "notion", "gsheet", "github", "meeting"
 ]
 EntityKindLiteral = Literal["engineer", "team", "service", "sprint", "ticket"]
 

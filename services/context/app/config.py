@@ -49,6 +49,18 @@ class Settings(BaseSettings):
     linear_api_key: str | None = None
     github_pat: str | None = None
 
+    # Meeting-transcript providers (Fireflies / Read.ai / Otter / Grain / tl;dv)
+    fireflies_api_key: str | None = None
+    fireflies_webhook_secret: str | None = None
+    readai_api_key: str | None = None
+    readai_webhook_secret: str | None = None
+    otter_api_key: str | None = None
+    otter_webhook_secret: str | None = None
+    grain_api_key: str | None = None
+    grain_webhook_secret: str | None = None
+    tldv_api_key: str | None = None
+    tldv_webhook_secret: str | None = None
+
     # Observability
     sentry_dsn_self: str | None = Field(
         default=None, description="Sentry DSN for monitoring this service itself."

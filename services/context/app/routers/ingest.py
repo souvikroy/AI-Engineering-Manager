@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, Body, Depends, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 
 from ..ingest import gsheet as gsheet_ingest
 from ..ingest import jira as jira_ingest
@@ -12,6 +12,7 @@ from ..ingest import notion as notion_ingest
 from ..ingest import sentry as sentry_ingest
 from ..ingest import slack as slack_ingest
 from ..ingest import text as text_ingest
+from ..ingest.meetings import PROVIDERS as MEETING_PROVIDERS
 from ..schemas.common import SourceLiteral
 from ..schemas.ingest import IngestAck
 from ..security.slack_dep import verify_slack_request
@@ -125,3 +126,31 @@ async def ingest_gsheet(_payload: dict = Body(...)) -> IngestAck:
 @router.post("/github", response_model=IngestAck)
 async def ingest_github(_payload: dict = Body(...)) -> IngestAck:
     return IngestAck(source="github", accepted=0, detail="not_yet_implemented")
+
+
+@router.post("/meetings/{provider}", response_model=IngestAck)
+async def ingest_meeting(provider: str, request: Request) -> IngestAck:
+    """Meeting-transcript webhook receiver.
+
+    The provider adapter handles per-provider auth (HMAC for Fireflies / Otter /
+    Grain / tl;dv, bearer for Read.ai). We hand it the raw bytes via a shim
+    header so signature verification operates on the exact bytes the provider
+    signed.
+    """
+    adapter = MEETING_PROVIDERS.get(provider)
+    if adapter is None:
+        raise HTTPException(status_code=404, detail=f"unknown_provider:{provider}")
+    raw_body = await request.body()
+    payload = json.loads(raw_body or b"{}") if raw_body else {}
+    headers = {k.lower(): v for k, v in request.headers.items()}
+    headers["__raw_body__"] = raw_body.decode("utf-8", errors="replace")
+    pm_id = await adapter.parse_webhook(payload, headers)
+    if pm_id is None:
+        return IngestAck(source="meeting", accepted=0, detail="ack_only")
+    res = await adapter.ingest(pm_id)
+    return IngestAck(
+        source="meeting",
+        accepted=0 if res.get("skipped") else 1,
+        deduplicated=1 if res.get("reason") == "unchanged" else 0,
+        detail=str(res.get("reason") or "ok"),
+    )

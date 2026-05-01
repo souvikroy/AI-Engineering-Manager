@@ -10,6 +10,19 @@ from ..db import acquire
 CONFIDENCE_AUTO_MERGE = 0.9
 
 
+async def resolve_email(
+    email: str, *, workspace_id: str | None = None
+) -> str | None:
+    """Resolve a meeting-participant email → canonical engineer entity id.
+
+    Convenience wrapper around `resolve_provider_id("email", ...)`. Returns
+    `None` if no mapping exists; callers (meeting ingester) auto-create an
+    `unmapped:<hash>` placeholder so the transcript still ingests.
+    """
+    return await resolve_provider_id("email", (email or "").strip().lower(),
+                                      workspace_id=workspace_id)
+
+
 async def resolve_provider_id(
     provider: str, provider_id: str, *, workspace_id: str | None = None
 ) -> str | None:

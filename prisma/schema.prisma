@@ -29,6 +29,7 @@ model Engineer {
   id             String     @id
   workspaceId    String?
   name           String
+  email          String?    @unique
   role           String
   level          String
   teamId         String
@@ -52,6 +53,8 @@ model OneOnOne {
   commitments String
   sentiment   String
   notes       String
+  meetingId   String?  @unique
+  meeting     Meeting? @relation("MeetingOneOnOne", fields: [meetingId], references: [id])
 
   @@index([workspaceId])
 }
@@ -71,18 +74,20 @@ model DesignDoc {
 }
 
 model Decision {
-  id          String     @id @default(cuid())
-  workspaceId String?
-  designDocId String?
-  designDoc   DesignDoc? @relation(fields: [designDocId], references: [id])
-  title       String
-  summary     String
-  options     String
-  chosen      String
-  rationale   String
-  tradeoffs   String
-  tags        String
-  createdAt   DateTime   @default(now())
+  id              String     @id @default(cuid())
+  workspaceId     String?
+  designDocId     String?
+  designDoc       DesignDoc? @relation(fields: [designDocId], references: [id])
+  sourceMeetingId String?
+  sourceMeeting   Meeting?   @relation("MeetingDecisions", fields: [sourceMeetingId], references: [id])
+  title           String
+  summary         String
+  options         String
+  chosen          String
+  rationale       String
+  tradeoffs       String
+  tags            String
+  createdAt       DateTime   @default(now())
 
   @@index([workspaceId])
 }
@@ -184,4 +189,63 @@ model ChatSession {
   updatedAt   DateTime @updatedAt
 
   @@index([workspaceId, updatedAt])
+}
+
+// ─── Meeting transcripts ─────────────────────────────────────────────
+// Populated by services/context/app/ingest/meetings/* (Fireflies / Read.ai /
+// Otter / Grain / tl;dv). Full transcript text lives only in rag.document;
+// `ragDocumentId` is the join key for retrieval.
+
+model Meeting {
+  id                String              @id @default(cuid())
+  workspaceId       String?
+  provider          String
+  providerMeetingId String
+  title             String
+  startedAt         DateTime
+  durationSeconds   Int
+  meetingType       String
+  confidential      Boolean             @default(false)
+  recordingUrl      String?
+  transcriptUrl     String?
+  participants      String              // JSON: [{engineerId, name, email, role}]
+  ragDocumentId     String?             // mirror of rag.document UUID
+  createdAt         DateTime            @default(now())
+  actionItems       MeetingActionItem[]
+  standupView       StandupView?
+  decisions         Decision[]          @relation("MeetingDecisions")
+  oneOnOne          OneOnOne?           @relation("MeetingOneOnOne")
+
+  @@unique([provider, providerMeetingId])
+  @@index([workspaceId, startedAt])
+  @@index([meetingType, startedAt])
+}
+
+model MeetingActionItem {
+  id                 String    @id @default(cuid())
+  workspaceId        String?
+  meetingId          String
+  meeting            Meeting   @relation(fields: [meetingId], references: [id])
+  text               String
+  assigneeEngineerId String?
+  dueDate            DateTime?
+  status             String    @default("open") // open | done | cancelled
+  source             String    @default("provider") // provider | haiku
+  createdAt          DateTime  @default(now())
+
+  @@index([assigneeEngineerId, status])
+}
+
+model StandupView {
+  id          String   @id @default(cuid())
+  workspaceId String?
+  meetingId   String   @unique
+  meeting     Meeting  @relation(fields: [meetingId], references: [id])
+  date        DateTime
+  engineerId  String
+  yesterday   String
+  today       String
+  blockers    String
+
+  @@index([date, engineerId])
 }
