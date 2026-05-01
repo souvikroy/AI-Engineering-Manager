@@ -1,5 +1,5 @@
 /**
- * Tool definitions + executors for the AI-EM Copilot chat loop.
+ * Tool definitions + executors for the CTO Brain chat loop.
  *
  * Tools split between:
  *  - **Python proxies** (RAG-backed): search_corpus, search_slack, get_entity_summary,

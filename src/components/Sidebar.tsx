@@ -10,9 +10,10 @@ import {
   Target,
   Siren,
   BookOpenCheck,
-  Sparkles,
   Search,
 } from "lucide-react";
+import { FreshnessPill } from "./FreshnessPill";
+import { BrandMark } from "./BrandLogo";
 
 type NavItem = { href: string; label: string; icon: typeof LayoutDashboard; group: "primary" | "ops"; hint?: string };
 
@@ -59,19 +60,14 @@ export function Sidebar() {
       {/* Brand */}
       <div className="px-5 pt-6 pb-5">
         <div className="flex items-center gap-2.5">
-          <div className="relative">
-            <div className="w-8 h-8 rounded-lg bg-accent-gradient flex items-center justify-center shadow-ring-accent">
-              <Sparkles className="w-4 h-4 text-bg-deep" strokeWidth={2.6} />
-            </div>
-            <div className="absolute inset-0 rounded-lg bg-accent blur-xl opacity-40 -z-10" />
-          </div>
-          <div className="leading-tight">
-            <div className="text-[15px] font-semibold tracking-tight2 text-ink-gradient">
-              AI EM
-            </div>
-            <div className="text-[10px] text-ink-faint uppercase tracking-kicker font-medium">
-              Copilot
-            </div>
+          <BrandMark size={28} />
+          <div className="leading-none flex items-baseline gap-1">
+            <span className="text-[16px] font-semibold tracking-tight2 text-ink">
+              CTO
+            </span>
+            <span className="text-[16px] font-semibold tracking-tight2 text-ink">
+              Brain
+            </span>
           </div>
         </div>
       </div>
@@ -103,13 +99,10 @@ export function Sidebar() {
         </ul>
       </nav>
 
-      {/* System status */}
+      {/* System status — live freshness across all integrated sources */}
       <div className="px-3 mb-3">
-        <div className="flex items-center gap-2 px-3 py-2 rounded-md text-[11px] text-ink-faint">
-          <span className="live-dot text-ok">
-            <span className="block w-2 h-2 rounded-full bg-ok" />
-          </span>
-          <span>All systems steady</span>
+        <div className="px-3 py-2 rounded-md">
+          <FreshnessPill compact />
         </div>
       </div>
 

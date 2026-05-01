@@ -22,7 +22,8 @@ from fastapi import FastAPI
 
 from .config import get_settings
 from .db import close_pool, init_pool
-from .routers import doc, freshness, health, ingest, retrieve, summary
+from .routers import admin, doc, freshness, health, ingest, retrieve, summary
+from .workers import scheduler as workers
 
 settings = get_settings()
 logging.basicConfig(level=settings.log_level)
@@ -37,7 +38,9 @@ async def lifespan(_app: FastAPI):
         import sentry_sdk
 
         sentry_sdk.init(dsn=settings.sentry_dsn_self, traces_sample_rate=0.1)
+    workers.start_scheduler()
     yield
+    await workers.stop_scheduler()
     await close_pool()
     log.info("service.shutdown")
 
@@ -55,3 +58,4 @@ app.include_router(summary.router)
 app.include_router(doc.router)
 app.include_router(freshness.router)
 app.include_router(ingest.router)
+app.include_router(admin.router)

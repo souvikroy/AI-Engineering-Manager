@@ -19,6 +19,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { resolveModel } from "@/lib/anthropic";
 import { TOOL_DEFS, executeTool } from "@/lib/chat/tools";
+import { verdictFooter, verifyAnswer } from "@/lib/chat/verify";
 import { getFreshness, pythonHealth, type Citation } from "@/lib/python";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,7 @@ export const maxDuration = 60;
 
 const MAX_TURNS = 6;
 
-const PERSONA = `You are AI EM, an engineering-management copilot for a CEO.
+const PERSONA = `You are CTO Brain, an engineering-management copilot for a CEO.
 Be direct, specific, and quantitative. Cite sources every time you reference a fact: \
 use the source URL or id from a tool result, formatted as [source-id]. Never invent \
 data. If a tool returns nothing, say so and propose a different tool to call.
@@ -89,20 +90,18 @@ export async function POST(req: Request) {
     content: m.content,
   }));
 
-  // Tool-use loop, collecting citations as we go.
+  // Tool-use loop, collecting citations + accumulating the final answer text.
   const allCitations: Citation[] = [];
+  let finalAnswerText = "";
   let turnsLeft = MAX_TURNS;
-  // Streaming output of the final assistant turn:
   const encoder = new TextEncoder();
   const readable = new ReadableStream({
     async start(controller) {
       try {
         let finalAssistantStream = false;
         while (turnsLeft-- > 0) {
-          // If there's no pending tool_use to resolve, this is the final turn — stream it.
           const pendingToolUse = lastPendingToolUses(turns);
           if (pendingToolUse.length === 0 && !finalAssistantStream) {
-            // Stream final response
             finalAssistantStream = true;
             const stream = await client.messages.stream({
               model,
@@ -119,12 +118,16 @@ export async function POST(req: Request) {
                 event.delta.type === "text_delta"
               ) {
                 controller.enqueue(encoder.encode(event.delta.text));
+                finalAnswerText += event.delta.text;
               } else if (event.type === "message_stop") {
                 const final = await stream.finalMessage();
                 turns.push({ role: "assistant", content: final.content });
                 if (final.stop_reason === "tool_use") {
                   needsAnotherRound = true;
                   finalAssistantStream = false;
+                  // model issued more tool calls — wipe the accumulated text
+                  // so we only verify the truly final assistant message.
+                  finalAnswerText = "";
                 }
               }
             }
@@ -158,7 +161,12 @@ export async function POST(req: Request) {
           turns.push({ role: "user", content: toolResults });
         }
 
-        // Footer with collected citations
+        // Provenance verifier (Haiku) → footer if anything looks unsupported.
+        const verdict = await verifyAnswer(finalAnswerText, allCitations);
+        const verifyLine = verdictFooter(verdict);
+        if (verifyLine) controller.enqueue(encoder.encode("\n\n" + verifyLine));
+
+        // Citations + freshness footer
         const footer = renderFooter(allCitations, freshnessLine);
         if (footer) controller.enqueue(encoder.encode("\n\n" + footer));
         controller.close();

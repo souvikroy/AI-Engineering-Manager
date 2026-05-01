@@ -3,8 +3,9 @@
 import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowUp, Sparkles, Loader2, Target, Brain, BarChart3, Siren } from "lucide-react";
+import { ArrowUp, Loader2, Target, Brain, BarChart3, Siren } from "lucide-react";
 import { Kbd } from "@/components/Card";
+import { BrandMark } from "@/components/BrandLogo";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -94,10 +95,8 @@ export default function ChatPage() {
           {/* Hero */}
           <div className="text-center max-w-2xl mx-auto mb-10 animate-rise">
             <div className="inline-flex relative mb-6">
-              <div className="w-14 h-14 rounded-2xl bg-accent-gradient flex items-center justify-center shadow-ring-accent">
-                <Sparkles className="w-6 h-6 text-bg-deep" strokeWidth={2.4} />
-              </div>
-              <div className="absolute inset-0 rounded-2xl bg-accent blur-2xl opacity-50 -z-10" />
+              <BrandMark size={56} />
+              <div className="absolute inset-0 blur-2xl opacity-30 -z-10 bg-[#d9f871]" />
             </div>
             <h1 className="text-[40px] font-semibold tracking-display leading-[1.05] mb-3 text-balance">
               <span className="text-gradient-ink">What's on your mind,</span>
@@ -168,15 +167,10 @@ export default function ChatPage() {
                         SR
                       </div>
                     ) : (
-                      <div className="w-5 h-5 rounded-full bg-accent-gradient flex items-center justify-center shadow-ring-accent">
-                        <Sparkles
-                          className="w-2.5 h-2.5 text-bg-deep"
-                          strokeWidth={2.6}
-                        />
-                      </div>
+                      <BrandMark size={20} glow={false} />
                     )}
                     <span className="text-[11px] text-ink-faint font-medium">
-                      {m.role === "user" ? "You" : "AI EM Copilot"}
+                      {m.role === "user" ? "You" : "CTO Brain"}
                     </span>
                   </div>
                   <div

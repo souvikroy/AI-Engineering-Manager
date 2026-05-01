@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512" role="img" aria-label="CTO Brain">
+  <rect width="100" height="100" fill="#08080b"/>
+  <polygon points="8,22 92,22 50,92" fill="#ffffff" stroke="#d9f871" stroke-width="2.4" stroke-linejoin="round"/>
+</svg>

@@ -1,14 +1,20 @@
 """Ingest endpoints — webhook receivers + a generic /ingest/text dev door."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Body
+import json
 
+from fastapi import APIRouter, Body, Depends, Request
+
+from ..ingest import gsheet as gsheet_ingest
 from ..ingest import jira as jira_ingest
+from ..ingest import linear as linear_ingest
+from ..ingest import notion as notion_ingest
 from ..ingest import sentry as sentry_ingest
 from ..ingest import slack as slack_ingest
 from ..ingest import text as text_ingest
 from ..schemas.common import SourceLiteral
 from ..schemas.ingest import IngestAck
+from ..security.slack_dep import verify_slack_request
 
 router = APIRouter(tags=["ingest"], prefix="/ingest")
 
@@ -47,13 +53,27 @@ async def ingest_text(
 
 
 @router.post("/slack", response_model=IngestAck)
-async def ingest_slack(payload: dict = Body(...)) -> IngestAck:
-    """Slack Events API receiver. Verify `X-Slack-Signature` upstream (proxy/middleware)."""
+async def ingest_slack(
+    _request: Request,
+    raw_body: bytes = Depends(verify_slack_request),
+) -> IngestAck:
+    """Slack Events API receiver — verifies HMAC signature, then dispatches.
+
+    The dependency reads the raw request body, validates `X-Slack-Signature`
+    + `X-Slack-Request-Timestamp`, and only then returns the bytes. We re-parse
+    here so the verification is over the exact bytes Slack signed (signing
+    over Pydantic-deserialized objects would break the HMAC contract).
+    """
+    payload = json.loads(raw_body or b"{}")
     if payload.get("type") == "url_verification":
-        # Slack handshake — return the challenge as part of detail
+        # Slack handshake — return the challenge so the Events API URL verifies.
         return IngestAck(source="slack", accepted=0, detail=payload.get("challenge"))
     res = await slack_ingest.ingest_event(payload)
-    return IngestAck(source="slack", accepted=0 if res.get("skipped") else 1, detail=str(res.get("reason") or "ok"))
+    return IngestAck(
+        source="slack",
+        accepted=0 if res.get("skipped") else 1,
+        detail=str(res.get("reason") or "ok"),
+    )
 
 
 @router.post("/jira", response_model=IngestAck)
@@ -68,25 +88,38 @@ async def ingest_sentry(payload: dict = Body(...)) -> IngestAck:
     return IngestAck(source="sentry", accepted=0 if res.get("skipped") else 1, detail=str(res.get("reason") or "ok"))
 
 
-# ── Stubs for the alternative integrations — wired in later phases ───────────
 @router.post("/linear", response_model=IngestAck)
-async def ingest_linear(_payload: dict = Body(...)) -> IngestAck:
-    return IngestAck(source="linear", accepted=0, detail="not_yet_implemented")
+async def ingest_linear(payload: dict = Body(...)) -> IngestAck:
+    """Linear webhook ('Issue' subscription). Parses one issue per call."""
+    res = await linear_ingest.ingest_webhook(payload)
+    return IngestAck(
+        source="linear",
+        accepted=0 if res.get("skipped") else 1,
+        detail=str(res.get("reason") or "ok"),
+    )
 
 
 @router.post("/confluence", response_model=IngestAck)
 async def ingest_confluence(_payload: dict = Body(...)) -> IngestAck:
-    return IngestAck(source="confluence", accepted=0, detail="not_yet_implemented")
+    # Confluence is cron-driven — webhook arrival is rare. Triggered via /admin/sync/confluence.
+    return IngestAck(source="confluence", accepted=0, detail="cron_only")
 
 
 @router.post("/notion", response_model=IngestAck)
-async def ingest_notion(_payload: dict = Body(...)) -> IngestAck:
-    return IngestAck(source="notion", accepted=0, detail="not_yet_implemented")
+async def ingest_notion(payload: dict = Body(...)) -> IngestAck:
+    """Notion webhook (page.updated/created)."""
+    res = await notion_ingest.ingest_webhook(payload)
+    return IngestAck(
+        source="notion",
+        accepted=0 if res.get("skipped") else 1,
+        detail=str(res.get("reason") or "ok"),
+    )
 
 
 @router.post("/gsheet", response_model=IngestAck)
 async def ingest_gsheet(_payload: dict = Body(...)) -> IngestAck:
-    return IngestAck(source="gsheet", accepted=0, detail="not_yet_implemented")
+    # Sheets has no useful webhooks for OKR rows; trigger via /admin/sync/gsheet.
+    return IngestAck(source="gsheet", accepted=0, detail="cron_only")
 
 
 @router.post("/github", response_model=IngestAck)

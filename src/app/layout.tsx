@@ -5,8 +5,13 @@ import "./globals.css";
 import { Sidebar } from "@/components/Sidebar";
 
 export const metadata: Metadata = {
-  title: "AI EM Copilot",
+  title: "CTO Brain",
   description: "Decision layer for engineering leadership.",
+  icons: {
+    icon: "/cto-brain.svg",
+    shortcut: "/cto-brain.svg",
+    apple: "/cto-brain.svg",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -13,6 +13,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
+import { FreshnessPill } from "@/components/FreshnessPill";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,9 @@ export default async function Dashboard() {
               One synthesis from standups, Jira, Slack, monitoring, and on-call —
               so you walk into every leadership sync already aligned.
             </p>
+            <div className="pt-1">
+              <FreshnessPill />
+            </div>
           </div>
           <RegenerateButton
             endpoint="/api/brief"
