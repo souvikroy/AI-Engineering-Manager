@@ -6,8 +6,22 @@ import remarkGfm from "remark-gfm";
 import { ArrowUp, Loader2, Target, Brain, BarChart3, Siren } from "lucide-react";
 import { Kbd } from "@/components/Card";
 import { BrandMark, MascotHero } from "@/components/BrandLogo";
+import { StatusPill, type StatusPillState } from "@/components/StatusPill";
+import type { ArtifactPayload, ChatEvent } from "@/lib/chat/events";
+import type { Citation } from "@/lib/python";
 
-type Msg = { role: "user" | "assistant"; content: string };
+type Verdict = "ok" | "weak" | "unsupported" | "skip";
+
+type Msg = {
+  role: "user" | "assistant";
+  content: string;
+  pills?: StatusPillState[];
+  artifactId?: string | null;
+  citations?: Citation[];
+  verdict?: Verdict;
+};
+
+export type ChatArtifact = ArtifactPayload & { id: string; citations: Citation[] };
 
 const SUGGESTIONS = [
   {
@@ -32,10 +46,18 @@ const SUGGESTIONS = [
   },
 ];
 
+function artifactLabel(a: ChatArtifact): string {
+  if (a.kind === "doc") return `Open report — ${a.payload.title}`;
+  if (a.kind === "leaderboard") return `Open leaderboard — ${a.payload.title}`;
+  return `Open code review — PR #${a.payload.pr_number}`;
+}
+
 export default function ChatPage() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
+  const [artifacts, setArtifacts] = useState<Record<string, ChatArtifact>>({});
+  const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -43,6 +65,71 @@ export default function ChatPage() {
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages]);
+
+  function applyEvent(ev: ChatEvent) {
+    setMessages((m) => {
+      const copy = [...m];
+      const last = copy[copy.length - 1];
+      if (!last || last.role !== "assistant") return m;
+
+      switch (ev.type) {
+        case "text":
+          copy[copy.length - 1] = { ...last, content: last.content + ev.delta };
+          return copy;
+        case "tool_status": {
+          const pills = [...(last.pills ?? [])];
+          if (ev.phase === "start") {
+            pills.push({
+              tool: ev.tool,
+              phase: "running",
+              input_summary: ev.input_summary,
+            });
+          } else {
+            // mark the most recent matching running pill as done
+            for (let i = pills.length - 1; i >= 0; i--) {
+              if (pills[i].tool === ev.tool && pills[i].phase === "running") {
+                pills[i] = {
+                  ...pills[i],
+                  phase: ev.error ? "error" : "done",
+                  duration_ms: ev.duration_ms,
+                  error: ev.error,
+                };
+                break;
+              }
+            }
+          }
+          copy[copy.length - 1] = { ...last, pills };
+          return copy;
+        }
+        case "artifact": {
+          const { type: _t, id, citations, ...artifact } = ev;
+          void _t;
+          setArtifacts((prev) => ({
+            ...prev,
+            [id]: { ...(artifact as ArtifactPayload), id, citations },
+          }));
+          setSelectedArtifactId(id);
+          copy[copy.length - 1] = { ...last, artifactId: id };
+          return copy;
+        }
+        case "done":
+          copy[copy.length - 1] = {
+            ...last,
+            verdict: ev.verdict,
+            citations: ev.citations,
+          };
+          return copy;
+        case "error":
+          copy[copy.length - 1] = {
+            ...last,
+            content: last.content + `\n\n_Error: ${ev.message}_`,
+          };
+          return copy;
+        default:
+          return m;
+      }
+    });
+  }
 
   async function send(text: string) {
     if (!text.trim() || streaming) return;
@@ -65,17 +152,34 @@ export default function ChatPage() {
       if (!res.body) throw new Error("No stream body");
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
-      let acc = "";
-      setMessages((m) => [...m, { role: "assistant", content: "" }]);
+      let buffer = "";
+      setMessages((m) => [...m, { role: "assistant", content: "", pills: [] }]);
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
-        acc += decoder.decode(value, { stream: true });
-        setMessages((m) => {
-          const copy = [...m];
-          copy[copy.length - 1] = { role: "assistant", content: acc };
-          return copy;
-        });
+        buffer += decoder.decode(value, { stream: true });
+        let nl = buffer.indexOf("\n");
+        while (nl !== -1) {
+          const line = buffer.slice(0, nl).trim();
+          buffer = buffer.slice(nl + 1);
+          if (line) {
+            try {
+              applyEvent(JSON.parse(line) as ChatEvent);
+            } catch {
+              // tolerate the occasional partial / malformed line
+            }
+          }
+          nl = buffer.indexOf("\n");
+        }
+      }
+      // flush any trailing line
+      const tail = buffer.trim();
+      if (tail) {
+        try {
+          applyEvent(JSON.parse(tail) as ChatEvent);
+        } catch {
+          // ignore
+        }
       }
     } catch (e) {
       setMessages((m) => [
@@ -180,12 +284,30 @@ export default function ChatPage() {
                         : "bg-surface border-border hairline"
                     }`}
                   >
+                    {m.pills && m.pills.length > 0 ? (
+                      <div className="mb-2 flex flex-wrap gap-1.5">
+                        {m.pills.map((p, j) => (
+                          <StatusPill key={j} state={p} />
+                        ))}
+                      </div>
+                    ) : null}
                     <div className="prose-thin">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {m.content ||
                           (streaming && i === messages.length - 1 ? "…" : "")}
                       </ReactMarkdown>
                     </div>
+                    {m.artifactId && artifacts[m.artifactId] ? (
+                      <button
+                        onClick={() => setSelectedArtifactId(m.artifactId!)}
+                        className="mt-3 inline-flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/[0.06] px-3 py-1.5 text-[11.5px] font-medium text-accent hover:bg-accent/[0.10] transition-colors"
+                      >
+                        <span>
+                          {artifactLabel(artifacts[m.artifactId]!)}
+                        </span>
+                        <span className="text-ink-faint">→</span>
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               ))}

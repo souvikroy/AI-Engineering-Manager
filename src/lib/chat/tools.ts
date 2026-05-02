@@ -22,6 +22,7 @@ import {
   type Citation,
   type SearchInput,
 } from "@/lib/python";
+import type { ArtifactPayload } from "@/lib/chat/events";
 
 export type ToolDef = {
   name: string;
@@ -32,6 +33,7 @@ export type ToolDef = {
 export type ToolResult = {
   content: string; // JSON-serialized payload sent back as tool_result
   citations: Citation[]; // collected for the provenance verifier
+  artifact?: ArtifactPayload; // optional UI artifact emitted alongside the tool result
 };
 
 /** All tool definitions sent to Claude on each turn. */

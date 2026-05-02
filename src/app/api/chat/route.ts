@@ -19,8 +19,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { resolveModel } from "@/lib/anthropic";
 import { TOOL_DEFS, executeTool } from "@/lib/chat/tools";
-import { verdictFooter, verifyAnswer } from "@/lib/chat/verify";
+import { verifyAnswer } from "@/lib/chat/verify";
 import { getFreshness, pythonHealth, type Citation } from "@/lib/python";
+import type { ChatEvent } from "@/lib/chat/events";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -53,37 +54,6 @@ export async function POST(req: Request) {
   const client = getClient();
   const model = resolveModel("reasoning");
 
-  // Heads-up footer when Python isn't reachable — the chat still runs via local tools.
-  const pythonUp = await pythonHealth();
-  let freshnessLine = "";
-  if (pythonUp) {
-    try {
-      const f = await getFreshness();
-      const parts = Object.entries(f.sources)
-        .filter(([, age]) => age != null)
-        .sort((a, b) => (a[1] as number) - (b[1] as number))
-        .slice(0, 4)
-        .map(([src, age]) => `${src} ${formatAge(age as number)}`);
-      if (parts.length > 0) freshnessLine = `Source freshness: ${parts.join(" · ")}.`;
-    } catch {
-      // ignore
-    }
-  } else {
-    freshnessLine =
-      "Note: context engine offline — answers limited to local Prisma + live adapters.";
-  }
-
-  const systemBlocks = [
-    { type: "text" as const, text: PERSONA },
-    {
-      type: "text" as const,
-      // Cache breakpoint after the persona — persona changes ~never;
-      // freshness footer is volatile and lands after the breakpoint.
-      text: freshnessLine,
-      cache_control: { type: "ephemeral" as const },
-    },
-  ];
-
   // Convert chat messages to Anthropic content blocks.
   const turns: Anthropic.MessageParam[] = messages.map((m) => ({
     role: m.role,
@@ -97,7 +67,43 @@ export async function POST(req: Request) {
   const encoder = new TextEncoder();
   const readable = new ReadableStream({
     async start(controller) {
+      const emit = (event: ChatEvent) => {
+        controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
+      };
       try {
+        // Heads-up footer when Python isn't reachable. Run inside the stream
+        // so the browser receives Response headers immediately rather than
+        // waiting on the health check + freshness query.
+        const pythonUp = await pythonHealth();
+        let freshnessLine = "";
+        if (pythonUp) {
+          try {
+            const f = await getFreshness();
+            const parts = Object.entries(f.sources)
+              .filter(([, age]) => age != null)
+              .sort((a, b) => (a[1] as number) - (b[1] as number))
+              .slice(0, 4)
+              .map(([src, age]) => `${src} ${formatAge(age as number)}`);
+            if (parts.length > 0) freshnessLine = `Source freshness: ${parts.join(" · ")}.`;
+          } catch {
+            // ignore
+          }
+        } else {
+          freshnessLine =
+            "Note: context engine offline — answers limited to local Prisma + live adapters.";
+        }
+
+        const systemBlocks = [
+          { type: "text" as const, text: PERSONA },
+          {
+            type: "text" as const,
+            // Cache breakpoint after the persona — persona changes ~never;
+            // freshness footer is volatile and lands after the breakpoint.
+            text: freshnessLine,
+            cache_control: { type: "ephemeral" as const },
+          },
+        ];
+
         let finalAssistantStream = false;
         while (turnsLeft-- > 0) {
           const pendingToolUse = lastPendingToolUses(turns);
@@ -117,7 +123,7 @@ export async function POST(req: Request) {
                 event.type === "content_block_delta" &&
                 event.delta.type === "text_delta"
               ) {
-                controller.enqueue(encoder.encode(event.delta.text));
+                emit({ type: "text", delta: event.delta.text });
                 finalAnswerText += event.delta.text;
               } else if (event.type === "message_stop") {
                 const final = await stream.finalMessage();
@@ -138,6 +144,14 @@ export async function POST(req: Request) {
           // Resolve pending tool_use blocks → tool_result content
           const toolResults: Anthropic.ToolResultBlockParam[] = [];
           for (const tu of pendingToolUse) {
+            const inputSummary = summarizeToolInput(tu.input);
+            emit({
+              type: "tool_status",
+              tool: tu.name,
+              phase: "start",
+              input_summary: inputSummary,
+            });
+            const t0 = Date.now();
             try {
               const out = await executeTool(
                 tu.name,
@@ -149,39 +163,84 @@ export async function POST(req: Request) {
                 tool_use_id: tu.id,
                 content: out.content,
               });
+              emit({
+                type: "tool_status",
+                tool: tu.name,
+                phase: "end",
+                duration_ms: Date.now() - t0,
+              });
+              if (out.artifact) {
+                emit({
+                  type: "artifact",
+                  id: tu.id,
+                  citations: out.citations,
+                  ...out.artifact,
+                });
+              }
             } catch (err) {
+              const message = (err as Error).message;
               toolResults.push({
                 type: "tool_result",
                 tool_use_id: tu.id,
-                content: JSON.stringify({ error: (err as Error).message }),
+                content: JSON.stringify({ error: message }),
                 is_error: true,
+              });
+              emit({
+                type: "tool_status",
+                tool: tu.name,
+                phase: "end",
+                duration_ms: Date.now() - t0,
+                error: message,
               });
             }
           }
           turns.push({ role: "user", content: toolResults });
         }
 
-        // Provenance verifier (Haiku) → footer if anything looks unsupported.
+        // Provenance verifier (Haiku) — verdict drops into the done event.
         const verdict = await verifyAnswer(finalAnswerText, allCitations);
-        const verifyLine = verdictFooter(verdict);
-        if (verifyLine) controller.enqueue(encoder.encode("\n\n" + verifyLine));
+        const dedupCitations = dedupeCitations(allCitations);
 
-        // Citations + freshness footer
-        const footer = renderFooter(allCitations, freshnessLine);
-        if (footer) controller.enqueue(encoder.encode("\n\n" + footer));
+        emit({
+          type: "done",
+          verdict: verdict.verdict,
+          citations: dedupCitations,
+          freshness: freshnessLine || undefined,
+        });
         controller.close();
       } catch (err) {
-        controller.enqueue(
-          encoder.encode(`\n\n[chat error: ${(err as Error).message}]`),
-        );
+        emit({ type: "error", message: (err as Error).message });
         controller.close();
       }
     },
   });
 
   return new Response(readable, {
-    headers: { "Content-Type": "text/plain; charset=utf-8" },
+    headers: {
+      "Content-Type": "application/x-ndjson; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+    },
   });
+}
+
+function summarizeToolInput(input: unknown): string {
+  if (!input || typeof input !== "object") return "";
+  const obj = input as Record<string, unknown>;
+  // Surface the most useful single field for the status pill.
+  const candidate =
+    obj.query ?? obj.engineer_id ?? obj.entity_id ?? obj.key ?? obj.doc_id ?? obj.topic ?? obj.pr_number;
+  if (candidate == null) return "";
+  const s = String(candidate);
+  return s.length > 60 ? s.slice(0, 57) + "…" : s;
+}
+
+function dedupeCitations(citations: Citation[]): Citation[] {
+  const dedup = new Map<string, Citation>();
+  for (const c of citations) {
+    const k = `${c.kind}:${c.id}`;
+    if (!dedup.has(k)) dedup.set(k, c);
+  }
+  return Array.from(dedup.values()).slice(0, 12);
 }
 
 function lastPendingToolUses(
@@ -201,23 +260,3 @@ function formatAge(seconds: number): string {
   return `${Math.round(seconds / 86400)}d`;
 }
 
-function renderFooter(citations: Citation[], freshness: string): string {
-  if (citations.length === 0 && !freshness) return "";
-  const lines: string[] = [];
-  if (citations.length > 0) {
-    const dedup = new Map<string, Citation>();
-    for (const c of citations) {
-      const k = `${c.kind}:${c.id}`;
-      if (!dedup.has(k)) dedup.set(k, c);
-    }
-    const top = Array.from(dedup.values()).slice(0, 8);
-    const list = top
-      .map((c) =>
-        c.url ? `[${c.kind}/${c.id}](${c.url})` : `${c.kind}/${c.id}`,
-      )
-      .join(" · ");
-    lines.push(`_Sources: ${list}_`);
-  }
-  if (freshness) lines.push(`_${freshness}_`);
-  return lines.join("\n");
-}
