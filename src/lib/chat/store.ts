@@ -62,6 +62,9 @@ type ChatState = {
   // automatically when the current turn ends. Cleared on Stop / switch / new.
   messageQueue: string[];
 
+  // UI chrome state — persisted in localStorage so reloads remember it.
+  sidebarCollapsed: boolean;
+
   // Actions
   loadSessions: () => Promise<void>;
   selectSession: (id: string | null) => Promise<void>;
@@ -72,7 +75,12 @@ type ChatState = {
   removeQueued: (index: number) => void;
   setSelectedArtifact: (id: string | null) => void;
   abortStreaming: () => void;
+  setSidebarCollapsed: (v: boolean) => void;
+  toggleSidebar: () => void;
+  hydrateUiPrefs: () => void; // called once on mount to read localStorage
 };
+
+const SIDEBAR_KEY = "aiem.sidebarCollapsed";
 
 function applyEvent(
   ev: ChatEvent,
@@ -167,6 +175,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   streaming: false,
   abortController: null,
   messageQueue: [],
+  sidebarCollapsed: false,
 
   loadSessions: async () => {
     set({ loadingSessions: true });
@@ -266,6 +275,32 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set((s) => ({
       messageQueue: s.messageQueue.filter((_, i) => i !== index),
     }));
+  },
+
+  setSidebarCollapsed: (v) => {
+    set({ sidebarCollapsed: v });
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem(SIDEBAR_KEY, v ? "1" : "0");
+      } catch {
+        // ignore quota / private-mode errors
+      }
+    }
+  },
+
+  toggleSidebar: () => {
+    const next = !get().sidebarCollapsed;
+    get().setSidebarCollapsed(next);
+  },
+
+  hydrateUiPrefs: () => {
+    if (typeof window === "undefined") return;
+    try {
+      const v = window.localStorage.getItem(SIDEBAR_KEY);
+      if (v === "1") set({ sidebarCollapsed: true });
+    } catch {
+      // ignore
+    }
   },
 
   // Unified entry point. If the agent is busy, queue the message; otherwise

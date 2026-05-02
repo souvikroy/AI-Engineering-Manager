@@ -33,16 +33,16 @@ function fmtDuration(ms?: number): string {
 
 export function StatusPill({ state }: { state: StatusPillState }) {
   const label = TOOL_LABELS[state.tool] ?? state.tool;
-  const baseColor =
+  const tone =
     state.phase === "error"
-      ? "border-red-500/30 bg-red-500/[0.06] text-red-300"
+      ? "bg-red-500/[0.06] text-red-300"
       : state.phase === "done"
-        ? "border-border bg-bg-elevated/60 text-ink-dim"
-        : "border-accent/30 bg-accent/[0.06] text-accent";
+        ? "bg-bg-elevated/60 text-ink-dim"
+        : "bg-accent/[0.06] text-accent";
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium leading-tight ${baseColor}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-caption surface-hairline ${tone}`}
     >
       {state.phase === "running" ? (
         <Loader2 className="h-3 w-3 animate-spin" />
@@ -51,12 +51,16 @@ export function StatusPill({ state }: { state: StatusPillState }) {
       ) : (
         <AlertCircle className="h-3 w-3" />
       )}
-      <span>{label}</span>
+      <span className="font-medium">{label}</span>
       {state.input_summary ? (
-        <span className="text-ink-faint">· {state.input_summary}</span>
+        <span className="text-ink-faint font-display italic">
+          · {state.input_summary}
+        </span>
       ) : null}
       {state.duration_ms != null && state.phase !== "running" ? (
-        <span className="text-ink-faint">· {fmtDuration(state.duration_ms)}</span>
+        <span className="text-ink-ghost tabular-nums">
+          · {fmtDuration(state.duration_ms)}
+        </span>
       ) : null}
     </span>
   );

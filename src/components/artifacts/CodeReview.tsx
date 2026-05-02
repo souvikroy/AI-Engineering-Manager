@@ -46,19 +46,21 @@ export function CodeReview({ artifact }: { artifact: CodeReviewArtifact }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-border px-6 py-4">
-        <div className="flex items-center gap-2 text-[10px] uppercase tracking-kicker text-ink-faint font-semibold">
-          <span>Code review</span>
+      <div className="px-8 pt-8 pb-6">
+        <div className="flex items-center gap-2 text-kicker">
+          <span>✦ Code Review</span>
           <span className="text-ink-ghost">·</span>
-          <span className="normal-case tracking-normal">{artifact.classification}</span>
+          <span>{artifact.classification}</span>
         </div>
-        <h2 className="mt-1 text-[18px] font-semibold tracking-tight2 text-ink">
-          {artifact.repo} #{artifact.pr_number}
+        <h2 className="mt-2 font-display text-h1 text-ink-cream tracking-tight2 leading-tight">
+          {artifact.repo}
+          <span className="text-ink-faint"> · </span>
+          <span className="font-mono text-[28px]">#{artifact.pr_number}</span>
         </h2>
-        <p className="text-[13px] text-ink-dim mt-0.5">{artifact.pr_title}</p>
-        <div className="mt-3 flex items-center gap-2">
+        <p className="text-body-lg text-ink-dim mt-1.5">{artifact.pr_title}</p>
+        <div className="mt-4 flex items-center gap-3 flex-wrap">
           <span
-            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium ${verdict.tone}`}
+            className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-caption font-display italic ${verdict.tone}`}
           >
             {verdict.label}
           </span>
@@ -67,7 +69,7 @@ export function CodeReview({ artifact }: { artifact: CodeReviewArtifact }) {
               href={artifact.pr_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[11px] text-ink-faint hover:text-accent"
+              className="inline-flex items-center gap-1 text-caption text-ink-faint hover:text-accent transition-colors"
             >
               View on GitHub
               <ExternalLink className="h-3 w-3" />
@@ -78,21 +80,25 @@ export function CodeReview({ artifact }: { artifact: CodeReviewArtifact }) {
               href={artifact.posted_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[11px] text-emerald-300 hover:underline"
+              className="inline-flex items-center gap-1 text-caption text-emerald-300 hover:underline"
             >
               <Check className="h-3 w-3" /> Posted
             </a>
           ) : null}
         </div>
         {artifact.summary ? (
-          <p className="mt-3 text-[13px] text-ink-dim leading-relaxed">{artifact.summary}</p>
+          <p className="mt-4 font-display italic text-body-lg text-ink-dim leading-relaxed">
+            {artifact.summary}
+          </p>
         ) : null}
       </div>
-      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-8 pb-8 space-y-5">
         {groups.length === 0 ? (
-          <div className="text-center py-12 text-[13px] text-ink-faint">
-            <Check className="h-5 w-5 mx-auto mb-2 text-emerald-300" />
-            No issues found. {passed} checks passed.
+          <div className="text-center py-16">
+            <Check className="h-6 w-6 mx-auto mb-3 text-emerald-300" />
+            <p className="font-display italic text-body-lg text-ink-dim">
+              No issues found. {passed} checks passed.
+            </p>
           </div>
         ) : (
           groups.map(({ sev, findings }) => {
@@ -100,35 +106,42 @@ export function CodeReview({ artifact }: { artifact: CodeReviewArtifact }) {
             const Icon = meta.icon;
             return (
               <div key={sev}>
-                <h3 className="text-[10px] uppercase tracking-kicker text-ink-faint font-semibold mb-2 flex items-center gap-1.5">
+                <h3 className="text-kicker mb-3 flex items-center gap-1.5">
                   <Icon className={`h-3.5 w-3.5 ${meta.tone}`} />
-                  {meta.label} ({findings.length})
+                  <span>
+                    ✦ {meta.label} ({findings.length})
+                  </span>
                 </h3>
-                <ul className="space-y-2">
+                <ul className="space-y-2.5">
                   {findings.map((f, i) => (
                     <li
                       key={`${f.ruleId}-${i}`}
-                      className="rounded-lg border border-border bg-surface p-3"
+                      className="rounded-xl bg-surface p-4 surface-card"
                     >
-                      <div className="flex items-start justify-between gap-3 mb-1">
-                        <span className="font-mono text-[11px] text-ink-faint">
+                      <div className="flex items-start justify-between gap-3 mb-1.5">
+                        <span className="font-mono text-caption text-ink-faint">
                           {f.ruleId}
                           {f.workflowId ? ` · W${f.workflowId}` : ""}
                         </span>
                         {f.location ? (
-                          <span className="font-mono text-[11px] text-ink-faint truncate max-w-[60%]">
+                          <span className="font-mono text-caption text-ink-faint truncate max-w-[60%]">
                             {f.location}
                           </span>
                         ) : null}
                       </div>
-                      <p className="text-[12.5px] text-ink leading-snug mb-1.5">{f.issue}</p>
+                      <p className="text-body-md text-ink leading-snug mb-2">
+                        {f.issue}
+                      </p>
                       {f.fix ? (
-                        <p className="text-[12px] text-ink-dim leading-snug">
-                          <span className="text-accent font-medium">Fix:</span> {f.fix}
+                        <p className="text-body-md text-ink-dim leading-snug">
+                          <span className="text-accent font-display italic">
+                            Fix:
+                          </span>{" "}
+                          {f.fix}
                         </p>
                       ) : null}
                       {f.evidence ? (
-                        <pre className="mt-2 text-[11px] text-ink-faint bg-bg-deep/40 rounded p-2 overflow-x-auto whitespace-pre-wrap">
+                        <pre className="mt-2.5 text-caption text-ink-faint bg-bg-deep/40 rounded-md p-2.5 overflow-x-auto whitespace-pre-wrap surface-hairline">
                           {f.evidence}
                         </pre>
                       ) : null}

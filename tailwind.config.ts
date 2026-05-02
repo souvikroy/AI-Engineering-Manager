@@ -7,6 +7,22 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
         mono: ["var(--font-geist-mono)", "ui-monospace", "monospace"],
+        // Fraunces (variable serif) — used for display-size headings,
+        // small-caps editorial labels, and italic accents only.
+        display: [
+          "var(--font-fraunces)",
+          "ui-serif",
+          "Georgia",
+          "Cambria",
+          "serif",
+        ],
+        serif: [
+          "var(--font-fraunces)",
+          "ui-serif",
+          "Georgia",
+          "Cambria",
+          "serif",
+        ],
       },
       colors: {
         bg: {
@@ -29,6 +45,9 @@ const config: Config = {
           dim: "rgba(255,255,255,0.65)",
           faint: "rgba(255,255,255,0.42)",
           ghost: "rgba(255,255,255,0.22)",
+          // Editorial cream — used sparingly on display-size serif text
+          // where extra warmth fits (hero greeting, artifact h1).
+          cream: "#f4ead9",
         },
         accent: {
           DEFAULT: "#fb923c",
@@ -100,6 +119,27 @@ const config: Config = {
           "0 1px 0 0 rgba(255,255,255,0.04) inset, 0 8px 32px -16px rgba(0,0,0,0.6)",
         "ring-accent":
           "0 0 0 1px rgba(251,146,60,0.35), 0 0 24px -4px rgba(251,146,60,0.30)",
+        // Editorial shadow scale — replaces hard borders on most surfaces.
+        // hairline = "this is a card" without an actual rule.
+        // card = standard message bubble, suggestion card.
+        // lift  = composer, artifact panel, sidebar (when expanded).
+        hairline: "inset 0 0 0 1px rgba(255,255,255,0.04)",
+        card: "inset 0 0 0 1px rgba(255,255,255,0.05), 0 1px 0 rgba(255,255,255,0.04), 0 18px 40px -16px rgba(0,0,0,0.45)",
+        lift: "inset 0 0 0 1px rgba(255,255,255,0.06), 0 1px 0 rgba(255,255,255,0.06), 0 32px 60px -20px rgba(0,0,0,0.55)",
+        "verified-glow":
+          "0 0 0 1px rgba(52,211,153,0.30), 0 0 24px -6px rgba(52,211,153,0.40)",
+      },
+      fontSize: {
+        // Editorial type scale. Display sizes are intended for Fraunces; the
+        // body sizes for Geist Sans. Pair with `font-display` / `font-sans`
+        // utilities at the call site.
+        display: ["56px", { lineHeight: "1.05", letterSpacing: "-0.02em" }],
+        h1: ["32px", { lineHeight: "1.15", letterSpacing: "-0.018em" }],
+        h2: ["22px", { lineHeight: "1.3", letterSpacing: "-0.012em" }],
+        "body-lg": ["15px", { lineHeight: "1.55" }],
+        "body-md": ["13.5px", { lineHeight: "1.5" }],
+        caption: ["11.5px", { lineHeight: "1.45" }],
+        kicker: ["10.5px", { lineHeight: "1.2", letterSpacing: "0.16em" }],
       },
     },
   },

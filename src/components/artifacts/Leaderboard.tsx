@@ -34,39 +34,47 @@ export function Leaderboard({ artifact }: { artifact: LeaderboardArtifact }) {
     }
   }
 
+  // Top three medal tints — applied to the rank cell only.
+  const rankTint = (i: number): string => {
+    if (i === 0) return "text-amber-300"; // gold
+    if (i === 1) return "text-zinc-300"; // silver
+    if (i === 2) return "text-orange-400/80"; // bronze
+    return "text-ink-ghost";
+  };
+
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-border px-6 py-4">
-        <div className="flex items-center gap-2 text-[10px] uppercase tracking-kicker text-ink-faint font-semibold">
-          <span>Leaderboard</span>
+      <div className="px-8 pt-8 pb-5">
+        <div className="flex items-center gap-2 text-kicker">
+          <span>✦ Leaderboard</span>
           <span className="text-ink-ghost">·</span>
-          <span className="normal-case tracking-normal">{artifact.window}</span>
+          <span>{artifact.window}</span>
         </div>
-        <h2 className="mt-1 text-[18px] font-semibold tracking-tight2 text-ink">
+        <h2 className="mt-2 font-display text-h1 text-ink-cream tracking-tight2 leading-tight">
           {artifact.title}
         </h2>
         {artifact.formula ? (
-          <p className="mt-1 text-[11px] text-ink-faint font-mono">{artifact.formula}</p>
+          <p className="mt-2 font-display italic text-caption text-ink-faint max-w-xl">
+            {artifact.formula}
+          </p>
         ) : null}
       </div>
-      <div className="flex-1 overflow-auto">
-        <table className="w-full border-collapse text-[12.5px]">
+      <div className="flex-1 overflow-auto px-2 pb-6">
+        <table className="w-full border-collapse text-body-md">
           <thead className="sticky top-0 bg-bg-elevated/95 backdrop-blur z-10">
-            <tr className="border-b border-border">
-              <th className="px-3 py-2.5 text-left text-[10px] uppercase tracking-kicker text-ink-faint font-semibold w-10">
-                #
-              </th>
+            <tr>
+              <th className="px-4 py-2.5 text-left text-kicker w-12">#</th>
               {artifact.columns.map((col) => {
                 const active = col.key === sortKey;
                 return (
                   <th
                     key={col.key}
-                    className={`px-3 py-2.5 text-[10px] uppercase tracking-kicker font-semibold cursor-pointer select-none hover:text-ink ${
+                    className={`px-4 py-2.5 cursor-pointer select-none transition-colors ${
                       col.type === "text" ? "text-left" : "text-right"
-                    } ${active ? "text-ink" : "text-ink-faint"}`}
+                    } ${active ? "text-ink-cream" : "text-ink-faint hover:text-ink-dim"}`}
                     onClick={() => toggleSort(col.key)}
                   >
-                    <span className="inline-flex items-center gap-1">
+                    <span className="inline-flex items-center gap-1 font-display italic text-[12px] tracking-tight2">
                       {col.label}
                       {active ? (
                         sortDir === "desc" ? (
@@ -85,17 +93,31 @@ export function Leaderboard({ artifact }: { artifact: LeaderboardArtifact }) {
             {sortedRows.map((row, i) => (
               <tr
                 key={row.engineer_id}
-                className="border-b border-border/40 hover:bg-bg-elevated/40 transition-colors"
+                className={`transition-colors hover:bg-bg-elevated/40 ${
+                  i % 2 === 0 ? "bg-transparent" : "bg-white/[0.012]"
+                }`}
               >
-                <td className="px-3 py-2 text-ink-faint tabular-nums">{i + 1}</td>
+                <td
+                  className={`px-4 py-3 tabular-nums font-display italic text-[14px] ${rankTint(i)}`}
+                >
+                  {i + 1}
+                </td>
                 {artifact.columns.map((col) => {
                   const v = row.values[col.key];
+                  const isScore = col.key === "score";
+                  const isName = col.key === "engineer_name";
                   return (
                     <td
                       key={col.key}
-                      className={`px-3 py-2 ${
+                      className={`px-4 py-3 ${
                         col.type === "text" ? "text-left" : "text-right tabular-nums"
-                      } ${col.key === "score" ? "font-semibold text-ink" : "text-ink-dim"}`}
+                      } ${
+                        isScore
+                          ? "font-display text-[18px] text-ink-cream"
+                          : isName
+                            ? "text-ink"
+                            : "text-ink-dim"
+                      }`}
                     >
                       {col.type === "percent" && typeof v === "number"
                         ? `${(v * 100).toFixed(0)}%`

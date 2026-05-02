@@ -58,9 +58,9 @@ export function SourceChips({
   if (sources.length === 0) return null;
 
   return (
-    <div className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-[10.5px] ${className ?? ""}`}>
-      <span className="text-[10px] uppercase tracking-kicker text-ink-faint font-semibold">
-        Checked
+    <div className={`flex flex-wrap items-center gap-x-2 gap-y-1.5 ${className ?? ""}`}>
+      <span className="text-kicker shrink-0 mr-1">
+        ✦ Sources Consulted
       </span>
       {visible.map((s) => {
         const meta = SOURCE_META[s];
@@ -69,16 +69,16 @@ export function SourceChips({
         return (
           <span
             key={s}
-            className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 transition-opacity ${
+            className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-caption transition-opacity surface-hairline ${
               on
-                ? `border-border bg-bg-elevated/70 ${meta.color}`
-                : "border-border/40 bg-transparent text-ink-ghost opacity-50"
+                ? `bg-bg-elevated/60 ${meta.color}`
+                : "bg-transparent text-ink-ghost opacity-50"
             }`}
             title={on ? `${meta.label} consulted` : `${meta.label} not consulted`}
           >
             <Icon className="h-2.5 w-2.5" />
             <span>{meta.label}</span>
-            <span className="text-[9px]">{on ? "✓" : "—"}</span>
+            <span className="text-[9px] opacity-70">{on ? "✓" : "—"}</span>
           </span>
         );
       })}
@@ -87,7 +87,8 @@ export function SourceChips({
 }
 
 /**
- * Tiny inline citation chip for use in message footers.
+ * Inline citation chip used at the bottom of an assistant message.
+ * Editorial mix: serif italic source kind + monospace id, separated by a slash.
  */
 export function CitationChip({
   kind,
@@ -102,10 +103,12 @@ export function CitationChip({
   const Icon = meta.icon;
   const inner = (
     <span
-      className={`inline-flex items-center gap-1 rounded-md border border-border bg-surface px-1.5 py-0.5 text-[11px] font-mono ${meta.color} hover:bg-surface-hover transition-colors`}
+      className={`inline-flex items-center gap-1.5 rounded-md bg-surface hover:bg-surface-hover px-2 py-0.5 text-caption transition-colors surface-hairline ${meta.color}`}
     >
       <Icon className="h-2.5 w-2.5" />
-      <span>{kind}/{id}</span>
+      <span className="font-display italic text-ink-dim">{meta.label}</span>
+      <span className="text-ink-ghost">/</span>
+      <span className="font-mono text-[10.5px] text-ink-dim">{id}</span>
     </span>
   );
   if (url) {

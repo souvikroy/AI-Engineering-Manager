@@ -6,6 +6,36 @@
   color-scheme: dark;
   --bg: #0c0a08;
   --bg-deep: #070605;
+
+  /* ── Editorial design tokens ─────────────────────────────────────── */
+
+  /* Type scale (matches tailwind.config.ts fontSize entries). */
+  --text-display: 56px;
+  --text-h1: 32px;
+  --text-h2: 22px;
+  --text-body-lg: 15px;
+  --text-body-md: 13.5px;
+  --text-caption: 11.5px;
+  --text-kicker: 10.5px;
+
+  /* Tracking */
+  --track-display: -0.02em;
+  --track-tight: -0.018em;
+  --track-kicker: 0.16em;
+
+  /* Soft shadow scale — replaces most hard borders. */
+  --shadow-hairline: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --shadow-card:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 1px 0 rgba(255, 255, 255, 0.04),
+    0 18px 40px -16px rgba(0, 0, 0, 0.45);
+  --shadow-lift:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 1px 0 rgba(255, 255, 255, 0.06),
+    0 32px 60px -20px rgba(0, 0, 0, 0.55);
+
+  /* Editorial cream — for display-size serif over the warm dark bg */
+  --ink-cream: #f4ead9;
 }
 
 * {
@@ -200,4 +230,230 @@ body::after {
 @layer utilities {
   .text-balance { text-wrap: balance; }
   .text-pretty { text-wrap: pretty; }
+
+  /* ── Editorial helpers (Phase F.1 foundation) ──────────────────── */
+
+  /* Force serif display family. Use sparingly — display sizes only. */
+  .font-display {
+    font-family: var(--font-fraunces), ui-serif, Georgia, "Cambria", serif;
+    font-feature-settings: "ss01", "ss02";
+  }
+
+  /* Small-caps editorial kicker (used for "Today", "Sources Consulted",
+     artifact-kind label above the title, etc.). Fraunces in italic at a
+     tiny size with wide tracking reads as editorial caps without needing
+     the dedicated SC face. */
+  .text-kicker {
+    font-family: var(--font-fraunces), ui-serif, Georgia, serif;
+    font-style: italic;
+    font-size: var(--text-kicker);
+    letter-spacing: var(--track-kicker);
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.42);
+    font-feature-settings: "ss01";
+  }
+
+  .text-kicker-strong {
+    font-family: var(--font-fraunces), ui-serif, Georgia, serif;
+    font-style: italic;
+    font-size: var(--text-kicker);
+    letter-spacing: var(--track-kicker);
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  /* Soft surface helpers — replace common border patterns. */
+  .surface-hairline { box-shadow: var(--shadow-hairline); }
+  .surface-card     { box-shadow: var(--shadow-card); }
+  .surface-lift     { box-shadow: var(--shadow-lift); }
+
+  /* Composer breathing — gently oscillates the lift shadow during streaming. */
+  .composer-breathing {
+    animation: composer-breathe 5.5s ease-in-out infinite;
+  }
+}
+
+@keyframes composer-breathe {
+  0%, 100% {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+      0 1px 0 rgba(255, 255, 255, 0.06),
+      0 32px 60px -20px rgba(0, 0, 0, 0.55),
+      0 0 0 0 rgba(251, 146, 60, 0);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+      0 1px 0 rgba(255, 255, 255, 0.08),
+      0 32px 60px -20px rgba(0, 0, 0, 0.55),
+      0 0 36px -8px rgba(251, 146, 60, 0.18);
+  }
+}
+
+/* Phase F.5 — additional micro-interactions */
+
+@keyframes enter-from-bottom {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-enter {
+  animation: enter-from-bottom 280ms cubic-bezier(0.32, 0.72, 0.32, 1) both;
+}
+
+/* Citation chip stagger — first 8 chips fade in at 40ms intervals once
+   the `done` event arrives. The block has `animate-enter` and each chip
+   inherits via :nth-child timing. */
+.stagger-citations > * {
+  animation: enter-from-bottom 240ms cubic-bezier(0.32, 0.72, 0.32, 1) both;
+}
+.stagger-citations > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-citations > *:nth-child(2) { animation-delay: 40ms; }
+.stagger-citations > *:nth-child(3) { animation-delay: 80ms; }
+.stagger-citations > *:nth-child(4) { animation-delay: 120ms; }
+.stagger-citations > *:nth-child(5) { animation-delay: 160ms; }
+.stagger-citations > *:nth-child(6) { animation-delay: 200ms; }
+.stagger-citations > *:nth-child(7) { animation-delay: 240ms; }
+.stagger-citations > *:nth-child(8) { animation-delay: 280ms; }
+
+/* Honor reduced-motion — Mac Reduce Motion + desktop accessibility. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Mobile responsive (Phase F.5) ───────────────────────────────────
+   Type scale steps down ~10%, sidebar becomes overlay, artifact panel
+   becomes a bottom sheet. */
+@media (max-width: 767px) {
+  :root {
+    --text-display: 40px;
+    --text-h1: 26px;
+    --text-h2: 19px;
+    --text-body-lg: 14.5px;
+    --text-body-md: 13px;
+  }
+}
+
+/* ── Editorial markdown body (Phase F.4 — applied to doc artifact) ──
+   Heavier hierarchy, long line-length, serif display headings, sans body.
+   Used via class `prose-editorial` on the rendering container. */
+.prose-editorial {
+  max-width: 68ch;
+  font-size: var(--text-body-lg);
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.88);
+}
+.prose-editorial > * + * { margin-top: 1.1rem; }
+.prose-editorial h1 {
+  font-family: var(--font-fraunces), ui-serif, Georgia, serif;
+  font-size: var(--text-h1);
+  line-height: 1.15;
+  letter-spacing: var(--track-tight);
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--ink-cream);
+  font-weight: 400;
+}
+.prose-editorial h2 {
+  font-family: var(--font-fraunces), ui-serif, Georgia, serif;
+  font-size: var(--text-h2);
+  line-height: 1.3;
+  letter-spacing: var(--track-tight);
+  font-style: italic;
+  font-weight: 400;
+  margin-top: 1.5rem;
+  margin-bottom: 0.4rem;
+  color: rgba(255, 255, 255, 0.94);
+}
+.prose-editorial h3 {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--text-kicker);
+  letter-spacing: var(--track-kicker);
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 1.4rem;
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+}
+.prose-editorial p { color: rgba(255, 255, 255, 0.86); }
+.prose-editorial strong { color: #fff; font-weight: 600; }
+.prose-editorial em {
+  font-family: var(--font-fraunces), ui-serif, Georgia, serif;
+  font-style: italic;
+}
+.prose-editorial blockquote {
+  border-left: 2px solid rgba(251, 146, 60, 0.55);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-family: var(--font-fraunces), ui-serif, Georgia, serif;
+  font-style: italic;
+  font-size: 17px;
+  line-height: 1.55;
+}
+.prose-editorial ul, .prose-editorial ol {
+  padding-left: 1.4rem;
+  margin: 0.6rem 0;
+}
+.prose-editorial ul { list-style: disc; }
+.prose-editorial ol { list-style: decimal; }
+.prose-editorial li { margin: 0.3rem 0; }
+.prose-editorial a {
+  color: #fdba74;
+  text-decoration: underline;
+  text-underline-offset: 2.5px;
+  text-decoration-color: rgba(251, 146, 60, 0.45);
+  text-decoration-thickness: 1px;
+}
+.prose-editorial code {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.86em;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+}
+.prose-editorial pre {
+  background: rgba(0, 0, 0, 0.45);
+  padding: 1rem;
+  border-radius: 10px;
+  overflow-x: auto;
+  margin: 1rem 0;
+  box-shadow: var(--shadow-hairline);
+}
+.prose-editorial pre code { background: transparent; padding: 0; }
+.prose-editorial table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: var(--text-body-md);
+}
+.prose-editorial thead th {
+  font-family: var(--font-fraunces), ui-serif, Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.62);
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.prose-editorial tbody td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.86);
+}
+.prose-editorial hr {
+  border: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 1.5rem 0;
 }

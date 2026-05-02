@@ -53,11 +53,13 @@ export function VerdictBadge({
       : meta.tooltip;
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] font-medium ${meta.tone}`}
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-caption ${meta.tone} ${
+        verdict === "ok" ? "shadow-verified-glow" : ""
+      }`}
       title={tooltip}
     >
       <Icon className="h-3 w-3" />
-      <span>{meta.label}</span>
+      <span className="font-display italic">{meta.label}</span>
     </span>
   );
 }
