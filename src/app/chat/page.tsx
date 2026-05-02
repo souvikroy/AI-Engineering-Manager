@@ -7,6 +7,7 @@ import { ArrowUp, Loader2, Target, Brain, BarChart3, Siren } from "lucide-react"
 import { Kbd } from "@/components/Card";
 import { BrandMark, MascotHero } from "@/components/BrandLogo";
 import { StatusPill, type StatusPillState } from "@/components/StatusPill";
+import { ArtifactPanel } from "@/components/ArtifactPanel";
 import type { ArtifactPayload, ChatEvent } from "@/lib/chat/events";
 import type { Citation } from "@/lib/python";
 
@@ -192,8 +193,18 @@ export default function ChatPage() {
     }
   }
 
+  const activeArtifact =
+    selectedArtifactId && artifacts[selectedArtifactId]
+      ? artifacts[selectedArtifactId]
+      : null;
+
   return (
-    <div className="flex flex-col h-[calc(100vh-96px)] animate-fade-in">
+    <div className="flex h-[calc(100vh-96px)] animate-fade-in gap-0">
+      <div
+        className={`flex flex-col h-full transition-all duration-300 ${
+          activeArtifact ? "w-1/2 min-w-[420px]" : "w-full"
+        }`}
+      >
       {messages.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center pb-24">
           {/* Hero */}
@@ -364,6 +375,15 @@ export default function ChatPage() {
           </div>
         </div>
       </form>
+      </div>
+      {activeArtifact ? (
+        <div className="flex-1 h-full">
+          <ArtifactPanel
+            artifact={activeArtifact}
+            onClose={() => setSelectedArtifactId(null)}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
