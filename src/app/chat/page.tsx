@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowUp, Loader2, Target, Brain, BarChart3, Siren, Square, X, ChevronUp } from "lucide-react";
+import { ArrowUp, Loader2, Target, Brain, BarChart3, Siren, Square, X, ChevronUp, Menu } from "lucide-react";
 import { Kbd } from "@/components/Card";
 import { BrandMark, MascotHero } from "@/components/BrandLogo";
 import { StatusPill } from "@/components/StatusPill";
@@ -107,13 +107,35 @@ export default function ChatPage() {
 
   const showHero = messages.length === 0;
 
+  // Mobile backdrop visibility — show when sidebar is expanded on small screens.
+  const sidebarOpen = !useChatStore((s) => s.sidebarCollapsed);
+
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-bg">
+    <div className="flex h-[100dvh] w-screen overflow-hidden bg-bg">
       <ChatHistorySidebar />
+
+      {/* Mobile-only backdrop that dims the chat when the sidebar is open. */}
+      {sidebarOpen ? (
+        <button
+          onClick={toggleSidebar}
+          aria-label="Close sidebar"
+          className="md:hidden fixed inset-0 z-20 bg-black/40 backdrop-blur-[2px] animate-fade-in"
+        />
+      ) : null}
+
+      {/* Mobile-only hamburger to open the sidebar. Hidden on md+. */}
+      <button
+        onClick={toggleSidebar}
+        className="md:hidden fixed top-3 left-3 z-40 w-9 h-9 rounded-full bg-bg-elevated/80 backdrop-blur surface-card text-ink-faint hover:text-ink flex items-center justify-center"
+        title="Toggle sidebar"
+        aria-label="Toggle sidebar"
+      >
+        <Menu className="w-4 h-4" />
+      </button>
 
       <div
         className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${
-          activeArtifact ? "flex-1 min-w-[420px]" : "flex-1"
+          activeArtifact ? "flex-1 md:min-w-[420px]" : "flex-1"
         }`}
       >
         {showHero ? (
@@ -134,7 +156,7 @@ export default function ChatPage() {
       </div>
 
       {activeArtifact ? (
-        <div className="w-1/2 min-w-[420px] max-w-[820px] h-full">
+        <div className="fixed md:relative inset-0 md:inset-auto md:w-1/2 md:min-w-[420px] md:max-w-[820px] h-full z-30 md:z-auto animate-enter">
           <ArtifactPanel
             artifact={activeArtifact}
             onClose={() => setSelectedArtifact(null)}
@@ -307,7 +329,7 @@ function MessageBubble({
               <SourceChips sources={msg.sources_checked} />
             ) : null}
             {msg.citations && msg.citations.length > 0 ? (
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="stagger-citations flex flex-wrap items-center gap-1.5">
                 <span className="text-kicker shrink-0 mr-1">
                   ✦ Sources
                 </span>

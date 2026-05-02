@@ -99,4 +99,24 @@ export const github: IGitHubAdapter = {
     });
     return { url: data.html_url };
   },
+
+  async postInlineComment(repo, number, input) {
+    const { owner, repo: name } = parseRepo(repo);
+    const o = client();
+    // Inline review comments are anchored to a specific commit + path + line.
+    // Fetch the PR's HEAD commit so the comment lands on the latest revision.
+    const pr = await o.pulls.get({ owner, repo: name, pull_number: number });
+    const commitId = pr.data.head.sha;
+    const { data } = await o.pulls.createReviewComment({
+      owner,
+      repo: name,
+      pull_number: number,
+      commit_id: commitId,
+      path: input.path,
+      line: input.line,
+      side: "RIGHT",
+      body: input.body,
+    });
+    return { url: data.html_url };
+  },
 };

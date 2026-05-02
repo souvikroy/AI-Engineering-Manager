@@ -14,8 +14,9 @@ import {
 import { useChatStore, type SessionSummary } from "@/lib/chat/store";
 import { BrandWordmark, BrandMark } from "@/components/BrandLogo";
 
-const COLLAPSED_W = 64;
-const EXPANDED_W = 288;
+// Width breakpoints — also encoded as Tailwind classes on the <aside>.
+//   collapsed desktop: 64px  · expanded desktop: 288px  · mobile overlay: 280px
+// (Kept here as a single source of truth comment; classes do the work.)
 
 function bucketFor(updatedAt: string, now: Date): string {
   const t = new Date(updatedAt);
@@ -107,8 +108,11 @@ export function ChatHistorySidebar() {
 
   return (
     <aside
-      className="relative flex h-full flex-col bg-bg/80 backdrop-blur-xl shrink-0 transition-[width] duration-[300ms] ease-[cubic-bezier(0.32,0.72,0.32,1)]"
-      style={{ width: collapsed ? COLLAPSED_W : EXPANDED_W }}
+      className={`fixed md:relative inset-y-0 left-0 z-30 md:z-auto flex h-full flex-col bg-bg/95 md:bg-bg/80 backdrop-blur-xl shrink-0 transition-[transform,width] duration-[300ms] ease-[cubic-bezier(0.32,0.72,0.32,1)] ${
+        collapsed
+          ? "-translate-x-full md:translate-x-0 w-[280px] md:w-[64px]"
+          : "translate-x-0 w-[280px] md:w-[288px]"
+      }`}
     >
       {/* Brand row */}
       <div
