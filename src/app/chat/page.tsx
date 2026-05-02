@@ -199,10 +199,10 @@ export default function ChatPage() {
       : null;
 
   return (
-    <div className="flex h-[calc(100vh-96px)] animate-fade-in gap-0">
+    <div className="flex h-screen animate-fade-in gap-0">
       <div
-        className={`flex flex-col h-full transition-all duration-300 ${
-          activeArtifact ? "w-1/2 min-w-[420px]" : "w-full"
+        className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${
+          activeArtifact ? "w-1/2 min-w-[420px] px-6 py-6" : "w-full max-w-4xl mx-auto px-8 py-8"
         }`}
       >
       {messages.length === 0 ? (
