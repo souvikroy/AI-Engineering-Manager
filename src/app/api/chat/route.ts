@@ -21,7 +21,11 @@ import { resolveModel } from "@/lib/anthropic";
 import { TOOL_DEFS, executeTool } from "@/lib/chat/tools";
 import { verifyAnswer } from "@/lib/chat/verify";
 import { getFreshness, pythonHealth, type Citation } from "@/lib/python";
-import type { ChatEvent } from "@/lib/chat/events";
+import type { ChatEvent, ArtifactPayload } from "@/lib/chat/events";
+import type { StatusPillState } from "@/components/StatusPill";
+import type { StoredMsg, ChatArtifact } from "@/lib/chat/store";
+import { prisma } from "@/lib/prisma";
+import { autoTitle, fallbackTitle } from "@/lib/chat/title";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -59,9 +63,10 @@ function getClient(): Anthropic {
 }
 
 type Msg = { role: "user" | "assistant"; content: string };
+type ChatRequestBody = { messages: Msg[]; session_id?: string | null };
 
 export async function POST(req: Request) {
-  const { messages } = (await req.json()) as { messages: Msg[] };
+  const { messages, session_id } = (await req.json()) as ChatRequestBody;
   const client = getClient();
   const model = resolveModel("reasoning");
 
@@ -76,11 +81,29 @@ export async function POST(req: Request) {
   let finalAnswerText = "";
   let turnsLeft = MAX_TURNS;
   const encoder = new TextEncoder();
+  // Persistence-side: track the last user message + the assistant pills,
+  // sources_checked, and any artifact emitted, so we can write to DB at end.
+  const lastUserText =
+    [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
+  const assistantPills: StatusPillState[] = [];
+  const sourcesChecked = new Set<string>();
+  let assistantArtifact: ChatArtifact | null = null;
   const readable = new ReadableStream({
     async start(controller) {
       const emit = (event: ChatEvent) => {
         controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
       };
+      // ── Resolve session id (create on first turn) ──────────────────
+      let sessionId = session_id ?? null;
+      const isNewSession = !sessionId;
+      if (isNewSession) {
+        const provisionalTitle = fallbackTitle(lastUserText) || "New chat";
+        const created = await prisma.chatSession.create({
+          data: { title: provisionalTitle, messages: JSON.stringify([]) },
+        });
+        sessionId = created.id;
+      }
+      emit({ type: "session", id: sessionId! });
       try {
         // Heads-up footer when Python isn't reachable. Run inside the stream
         // so the browser receives Response headers immediately rather than
@@ -162,6 +185,13 @@ export async function POST(req: Request) {
               phase: "start",
               input_summary: inputSummary,
             });
+            assistantPills.push({
+              tool: tu.name,
+              phase: "running",
+              input_summary: inputSummary,
+            });
+            // Track which sources the model checked (for trust signals).
+            recordSourcesChecked(tu.name, tu.input, sourcesChecked);
             const t0 = Date.now();
             try {
               const out = await executeTool(
@@ -174,12 +204,22 @@ export async function POST(req: Request) {
                 tool_use_id: tu.id,
                 content: out.content,
               });
+              const dur = Date.now() - t0;
               emit({
                 type: "tool_status",
                 tool: tu.name,
                 phase: "end",
-                duration_ms: Date.now() - t0,
+                duration_ms: dur,
               });
+              // Update the matching running pill in the persisted snapshot.
+              const idx = lastRunningIndex(assistantPills, tu.name);
+              if (idx >= 0) {
+                assistantPills[idx] = {
+                  ...assistantPills[idx],
+                  phase: "done",
+                  duration_ms: dur,
+                };
+              }
               if (out.artifact) {
                 emit({
                   type: "artifact",
@@ -187,6 +227,11 @@ export async function POST(req: Request) {
                   citations: out.citations,
                   ...out.artifact,
                 });
+                assistantArtifact = {
+                  id: tu.id,
+                  citations: out.citations,
+                  ...(out.artifact as ArtifactPayload),
+                };
               }
             } catch (err) {
               const message = (err as Error).message;
@@ -196,13 +241,23 @@ export async function POST(req: Request) {
                 content: JSON.stringify({ error: message }),
                 is_error: true,
               });
+              const dur = Date.now() - t0;
               emit({
                 type: "tool_status",
                 tool: tu.name,
                 phase: "end",
-                duration_ms: Date.now() - t0,
+                duration_ms: dur,
                 error: message,
               });
+              const idx = lastRunningIndex(assistantPills, tu.name);
+              if (idx >= 0) {
+                assistantPills[idx] = {
+                  ...assistantPills[idx],
+                  phase: "error",
+                  duration_ms: dur,
+                  error: message,
+                };
+              }
             }
           }
           turns.push({ role: "user", content: toolResults });
@@ -211,13 +266,32 @@ export async function POST(req: Request) {
         // Provenance verifier (Haiku) — verdict drops into the done event.
         const verdict = await verifyAnswer(finalAnswerText, allCitations);
         const dedupCitations = dedupeCitations(allCitations);
+        const sourcesCheckedArr = Array.from(sourcesChecked);
 
         emit({
           type: "done",
           verdict: verdict.verdict,
           citations: dedupCitations,
           freshness: freshnessLine || undefined,
+          sources_checked: sourcesCheckedArr,
+          unsupported_claims: verdict.unsupported_claims,
         });
+
+        // ── Persist to DB (don't block stream close on this) ─────────
+        await persistTurn(sessionId!, {
+          isNewSession,
+          userMessage: lastUserText,
+          assistantText: finalAnswerText,
+          pills: assistantPills,
+          citations: dedupCitations,
+          verdict: verdict.verdict,
+          sourcesChecked: sourcesCheckedArr,
+          freshness: freshnessLine || undefined,
+          artifact: assistantArtifact,
+        }).catch((e) => {
+          console.warn("[chat] persist failed:", (e as Error).message);
+        });
+
         controller.close();
       } catch (err) {
         emit({ type: "error", message: (err as Error).message });
@@ -252,6 +326,138 @@ function dedupeCitations(citations: Citation[]): Citation[] {
     if (!dedup.has(k)) dedup.set(k, c);
   }
   return Array.from(dedup.values()).slice(0, 12);
+}
+
+// Map a tool call to the source kinds it touched. Surfaces in the
+// trust-signal "Sources checked" chip row.
+function recordSourcesChecked(
+  toolName: string,
+  input: unknown,
+  sink: Set<string>,
+): void {
+  const i = (input ?? {}) as Record<string, unknown>;
+  switch (toolName) {
+    case "search_corpus": {
+      const sources = Array.isArray(i.sources) ? (i.sources as string[]) : null;
+      if (sources && sources.length > 0) {
+        for (const s of sources) sink.add(s);
+      } else {
+        // search_corpus with no sources arg = "all"; record nothing specific.
+        sink.add("rag");
+      }
+      return;
+    }
+    case "search_slack":
+      sink.add("slack");
+      return;
+    case "search_standups":
+      sink.add("standup");
+      return;
+    case "get_doc":
+    case "get_entity_summary":
+      sink.add("rag");
+      return;
+    case "get_engineer_profile":
+      sink.add("prisma");
+      return;
+    case "get_okr_status":
+      sink.add("prisma");
+      return;
+    case "list_incidents":
+      sink.add("sentry");
+      return;
+    case "get_ticket":
+      sink.add("jira");
+      return;
+    case "produce_doc":
+      sink.add("prisma");
+      sink.add("jira");
+      sink.add("sentry");
+      return;
+    case "produce_leaderboard":
+      sink.add("jira");
+      sink.add("github");
+      sink.add("sentry");
+      sink.add("standup");
+      return;
+    case "produce_code_review":
+      sink.add("github");
+      return;
+  }
+}
+
+function lastRunningIndex(pills: StatusPillState[], tool: string): number {
+  for (let i = pills.length - 1; i >= 0; i--) {
+    if (pills[i].tool === tool && pills[i].phase === "running") return i;
+  }
+  return -1;
+}
+
+type PersistTurnArgs = {
+  isNewSession: boolean;
+  userMessage: string; // latest user turn (the one this assistant turn is replying to)
+  assistantText: string;
+  pills: StatusPillState[];
+  citations: Citation[];
+  verdict?: "ok" | "weak" | "unsupported" | "skip";
+  sourcesChecked: string[];
+  freshness?: string;
+  artifact: ChatArtifact | null;
+};
+
+async function persistTurn(
+  sessionId: string,
+  args: PersistTurnArgs,
+): Promise<void> {
+  const row = await prisma.chatSession.findUnique({ where: { id: sessionId } });
+  if (!row) return;
+  // The DB column is JSON-as-string; parse defensively.
+  let payload: { messages: StoredMsg[]; artifacts: Record<string, ChatArtifact> };
+  try {
+    const p = JSON.parse(row.messages) as Partial<{
+      messages: StoredMsg[];
+      artifacts: Record<string, ChatArtifact>;
+    }>;
+    payload = {
+      messages: Array.isArray(p.messages) ? p.messages : [],
+      artifacts:
+        p.artifacts && typeof p.artifacts === "object" ? p.artifacts : {},
+    };
+  } catch {
+    payload = { messages: [], artifacts: {} };
+  }
+
+  // Append the new user + assistant pair from this turn.
+  if (args.userMessage) {
+    payload.messages.push({ role: "user", content: args.userMessage });
+  }
+  payload.messages.push({
+    role: "assistant",
+    content: args.assistantText,
+    pills: args.pills,
+    citations: args.citations,
+    verdict: args.verdict,
+    sources_checked: args.sourcesChecked,
+    freshness: args.freshness,
+    artifact_id: args.artifact?.id ?? null,
+  });
+  if (args.artifact) {
+    payload.artifacts[args.artifact.id] = args.artifact;
+  }
+
+  // Title: only generate via Haiku on the FIRST turn of a new session.
+  let nextTitle: string | undefined;
+  if (args.isNewSession && args.userMessage) {
+    nextTitle = await autoTitle(args.userMessage);
+  }
+
+  await prisma.chatSession.update({
+    where: { id: sessionId },
+    data: {
+      messages: JSON.stringify(payload),
+      ...(nextTitle ? { title: nextTitle } : {}),
+    },
+  });
 }
 
 function lastPendingToolUses(

@@ -70,6 +70,7 @@ export type ArtifactPayload =
   | { kind: "code_review"; payload: CodeReviewArtifact };
 
 export type ChatEvent =
+  | { type: "session"; id: string }
   | { type: "text"; delta: string }
   | {
       type: "tool_status";
@@ -89,5 +90,7 @@ export type ChatEvent =
       verdict?: "ok" | "weak" | "unsupported" | "skip";
       citations?: Citation[];
       freshness?: string;
+      sources_checked?: string[];
+      unsupported_claims?: string[];
     }
   | { type: "error"; message: string };
