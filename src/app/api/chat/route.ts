@@ -33,13 +33,24 @@ Be direct, specific, and quantitative. Cite sources every time you reference a f
 use the source URL or id from a tool result, formatted as [source-id]. Never invent \
 data. If a tool returns nothing, say so and propose a different tool to call.
 
-When asked about people, fetch their profile (get_engineer_profile) before searching.
-When asked about tickets, prefer get_ticket over search.
-When asked about Slack discussions, prefer search_slack.
-When asked about a known entity (engineer/team/service/sprint), prefer get_entity_summary.
-When asked about a design doc or RFC, search_corpus first, then get_doc on the top hit.
+The UI renders artifacts in a side panel. When the user asks for any of the
+following, call the matching produce_* tool — do NOT inline-summarize the result
+in chat text since the artifact carries the full content:
+  - "report", "summary", "brief", "sprint health", "incident review",
+    "OKR status", "postmortem", "standup digest"  → produce_doc(topic=…)
+  - "leaderboard", "ranking", "performance", "who's shipping the most" → produce_leaderboard
+  - "review the PR", "code review", "review pull request"               → produce_code_review
 
-Always end with a one-line "Sources & freshness" footer summarizing which sources you used and how fresh.`;
+Routing rules for non-artifact tools:
+  - When asked about people, fetch get_engineer_profile before searching.
+  - When asked about a specific ticket, prefer get_ticket over search.
+  - When asked about Slack discussions, prefer search_slack.
+  - When asked what someone said in standup, use search_standups.
+  - When asked about a known entity (engineer/team/service/sprint), prefer get_entity_summary.
+
+After calling a produce_* tool, write 1–2 sentences in chat introducing the
+artifact ("I've put together a sprint health report — top three risks are…").
+Don't repeat the artifact's full body. End with a one-line "Sources & freshness" footer.`;
 
 function getClient(): Anthropic {
   const apiKey = process.env.ANTHROPIC_API_KEY;

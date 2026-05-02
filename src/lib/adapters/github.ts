@@ -33,6 +33,29 @@ export const github: IGitHubAdapter = {
     const { data } = await client().pulls.list({ owner, repo: name, state: "open", per_page: 50 });
     return data.map((p) => ({ number: p.number, title: p.title, url: p.html_url }));
   },
+  async listMergedPRs(repo, since) {
+    const { owner, repo: name } = parseRepo(repo);
+    const sinceDate = new Date(since).getTime();
+    // GitHub PR list doesn't filter by merge date — pull last 100 closed PRs
+    // and trim to the window. Plenty for leaderboard windows up to ~1 quarter.
+    const { data } = await client().pulls.list({
+      owner,
+      repo: name,
+      state: "closed",
+      sort: "updated",
+      direction: "desc",
+      per_page: 100,
+    });
+    return data
+      .filter((p) => p.merged_at && new Date(p.merged_at).getTime() >= sinceDate)
+      .map((p) => ({
+        number: p.number,
+        title: p.title,
+        url: p.html_url,
+        author: p.user?.login ?? "unknown",
+        mergedAt: p.merged_at as string,
+      }));
+  },
   async getPR(repo, number) {
     const { owner, repo: name } = parseRepo(repo);
     const o = client();

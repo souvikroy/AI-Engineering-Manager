@@ -22,6 +22,7 @@ export const SourceSchema = z.enum([
   "notion",
   "gsheet",
   "github",
+  "standup",
 ]);
 export type Source = z.infer<typeof SourceSchema>;
 

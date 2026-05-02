@@ -23,6 +23,9 @@ import {
   type SearchInput,
 } from "@/lib/python";
 import type { ArtifactPayload } from "@/lib/chat/events";
+import { produceCodeReview } from "@/lib/chat/artifacts/code-review";
+import { produceDoc } from "@/lib/chat/artifacts/doc";
+import { produceLeaderboard } from "@/lib/chat/artifacts/leaderboard";
 
 export type ToolDef = {
   name: string;
@@ -60,6 +63,7 @@ export const TOOL_DEFS: ToolDef[] = [
               "notion",
               "gsheet",
               "github",
+              "standup",
             ],
           },
         },
@@ -161,6 +165,83 @@ export const TOOL_DEFS: ToolDef[] = [
       type: "object",
       properties: { key: { type: "string" } },
       required: ["key"],
+    },
+  },
+  {
+    name: "search_standups",
+    description:
+      "RAG search restricted to standup-meeting transcripts. Use this when the user asks about what someone said in standup, recent commitments, or recurring blockers.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string" },
+        since: { type: "string", description: "ISO timestamp lower bound" },
+        until: { type: "string", description: "ISO timestamp upper bound" },
+        engineer_id: {
+          type: "string",
+          description: "Optional engineer filter, e.g. 'eng_priya'.",
+        },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "produce_doc",
+    description:
+      "Produce a markdown REPORT artifact. Use this for sprint-health reports, incident summaries/postmortems, OKR status, the daily brief, or a standup digest. Returns the full report rendered as markdown plus a 'doc' artifact for the side panel. Pick the right `topic` based on the user's question.",
+    input_schema: {
+      type: "object",
+      properties: {
+        topic: {
+          enum: ["brief", "okr", "incident", "sprint", "standup"],
+        },
+        scope: {
+          type: "string",
+          description:
+            "Optional id — incident_id for 'incident' topic, sprint_id for 'sprint' topic.",
+        },
+        window: {
+          enum: ["day", "week", "sprint", "quarter"],
+          description: "For 'standup' topic.",
+        },
+        postmortem: {
+          type: "boolean",
+          description:
+            "For 'incident' topic: produce a full postmortem (timeline + root cause) instead of just a situation summary. Defaults to false.",
+        },
+      },
+      required: ["topic"],
+    },
+  },
+  {
+    name: "produce_leaderboard",
+    description:
+      "Produce a LEADERBOARD artifact ranking engineers by composite performance score. Pulls tickets shipped (Jira), PRs merged (GitHub), incidents resolved (Sentry), and standup participation (DB) over the chosen window. Score = weighted z-score, rescaled to 0–100.",
+    input_schema: {
+      type: "object",
+      properties: {
+        window: { enum: ["week", "sprint", "quarter"], default: "sprint" },
+        team_id: { type: "string", description: "Optional team filter." },
+      },
+    },
+  },
+  {
+    name: "produce_code_review",
+    description:
+      "Produce a CODE REVIEW artifact for a GitHub PR. Runs the full review pipeline (classification, workflows, verdict, findings) and returns a code_review artifact with verdict + findings grouped by severity. If pr_number is omitted, defaults to the highest-numbered open PR on the configured repo.",
+    input_schema: {
+      type: "object",
+      properties: {
+        pr_number: { type: "integer" },
+        repo: {
+          type: "string",
+          description: "owner/name format, e.g. 'vercel/next.js'. Defaults to GITHUB_REPO env.",
+        },
+        post_to_github: {
+          type: "boolean",
+          description: "Post the review back to the PR as a GitHub comment. Defaults to false.",
+        },
+      },
     },
   },
 ];
@@ -300,6 +381,64 @@ export async function executeTool(
       if (!t) return pack({ error: "not_found", key: i.key }, []);
       const services = await monitoring.services();
       return pack({ ...t, related_services: services.filter((s) => s.team === t.team) }, []);
+    }
+    case "search_standups": {
+      const i = input as {
+        query: string;
+        since?: string;
+        until?: string;
+        engineer_id?: string;
+      };
+      const res = await searchCorpus({
+        query: i.query,
+        since: i.since,
+        until: i.until,
+        sources: ["standup"],
+        entities: i.engineer_id ? [`engineer:${i.engineer_id}`] : undefined,
+        k: 10,
+      });
+      return pack(
+        res.results.map((r) => ({
+          id: r.id,
+          url: r.source_url,
+          freshness_seconds: r.freshness_seconds,
+          entity_refs: r.entity_refs,
+          text: TRUNCATE(r.text, 600),
+        })),
+        res.citations,
+      );
+    }
+    case "produce_doc": {
+      const i = input as {
+        topic: "brief" | "okr" | "incident" | "sprint" | "standup";
+        scope?: string;
+        window?: "day" | "week" | "sprint" | "quarter";
+        postmortem?: boolean;
+      };
+      const out = await produceDoc(i);
+      return {
+        content: out.summary,
+        citations: out.citations,
+        artifact: { kind: "doc", payload: out.artifact },
+      };
+    }
+    case "produce_leaderboard": {
+      const i = input as { window?: "week" | "sprint" | "quarter"; team_id?: string };
+      const out = await produceLeaderboard(i);
+      return {
+        content: out.summary,
+        citations: out.citations,
+        artifact: { kind: "leaderboard", payload: out.artifact },
+      };
+    }
+    case "produce_code_review": {
+      const i = input as { pr_number?: number; repo?: string; post_to_github?: boolean };
+      const out = await produceCodeReview(i);
+      return {
+        content: out.summary,
+        citations: out.citations,
+        artifact: { kind: "code_review", payload: out.artifact },
+      };
     }
     default:
       return pack({ error: `unknown_tool:${name}` }, []);

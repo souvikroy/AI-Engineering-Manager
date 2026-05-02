@@ -101,8 +101,17 @@ export type GitHubPR = {
   commits: { sha: string; message: string }[];
 };
 
+export type GitHubMergedPR = {
+  number: number;
+  title: string;
+  url: string;
+  author: string;
+  mergedAt: string;
+};
+
 export interface IGitHubAdapter {
   listOpenPRs(repo: string): Promise<{ number: number; title: string; url: string }[]>;
+  listMergedPRs(repo: string, since: string): Promise<GitHubMergedPR[]>;
   getPR(repo: string, number: number): Promise<GitHubPR>;
   postReviewComment(repo: string, number: number, body: string): Promise<{ url: string }>;
 }

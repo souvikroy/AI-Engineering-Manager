@@ -38,21 +38,27 @@ export type LeaderboardArtifact = {
 
 export type CodeReviewFinding = {
   ruleId: string;
-  severity: "info" | "warn" | "block";
-  status: "ok" | "warn" | "fail";
-  workflowId?: string;
-  location?: { file?: string; line?: number };
+  severity: "blocking" | "warning" | "nit" | "info";
+  status: "pass" | "fail" | "na";
+  workflowId?: number;
+  location?: string;
   issue: string;
   fix?: string;
-  evidence?: string;
+  evidence: string;
 };
 
 export type CodeReviewArtifact = {
   repo: string;
   pr_number: number;
   pr_title: string;
+  pr_url?: string;
   classification: string;
-  verdict: "approve" | "changes_requested" | "comment";
+  verdict:
+    | "BLOCK"
+    | "REQUEST_CHANGES"
+    | "APPROVE_WITH_NITS"
+    | "APPROVE"
+    | "INSUFFICIENT_INFO";
   summary: string;
   findings: CodeReviewFinding[];
   posted_url?: string | null;
