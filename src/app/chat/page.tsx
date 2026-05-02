@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowUp, Loader2, Target, Brain, BarChart3, Siren, Square } from "lucide-react";
+import { ArrowUp, Loader2, Target, Brain, BarChart3, Siren, Square, X, ChevronUp } from "lucide-react";
 import { Kbd } from "@/components/Card";
 import { BrandMark, MascotHero } from "@/components/BrandLogo";
 import { StatusPill } from "@/components/StatusPill";
@@ -42,9 +42,11 @@ export default function ChatPage() {
   const selectedArtifactId = useChatStore((s) => s.selectedArtifactId);
   const setSelectedArtifact = useChatStore((s) => s.setSelectedArtifact);
   const streaming = useChatStore((s) => s.streaming);
-  const sendMessage = useChatStore((s) => s.sendMessage);
+  const submitMessage = useChatStore((s) => s.submitMessage);
   const abortStreaming = useChatStore((s) => s.abortStreaming);
   const activeSessionId = useChatStore((s) => s.activeSessionId);
+  const messageQueue = useChatStore((s) => s.messageQueue);
+  const removeQueued = useChatStore((s) => s.removeQueued);
 
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -52,17 +54,18 @@ export default function ChatPage() {
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages]);
+  }, [messages, messageQueue]);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, [activeSessionId]);
 
-  async function send(text: string) {
-    if (!text.trim() || streaming) return;
+  function send(text: string) {
+    if (!text.trim()) return;
     inputValueRef.current = "";
     if (inputRef.current) inputRef.current.value = "";
-    await sendMessage(text);
+    // submitMessage routes to send-now or enqueue based on streaming state.
+    submitMessage(text);
   }
 
   const activeArtifact: ChatArtifact | null =
@@ -93,6 +96,8 @@ export default function ChatPage() {
           streaming={streaming}
           onSend={send}
           onAbort={abortStreaming}
+          queue={messageQueue}
+          onRemoveQueued={removeQueued}
         />
       </div>
 
@@ -292,73 +297,119 @@ function Composer({
   streaming,
   onSend,
   onAbort,
+  queue,
+  onRemoveQueued,
 }: {
   inputRef: React.RefObject<HTMLTextAreaElement | null>;
   inputValueRef: React.MutableRefObject<string>;
   streaming: boolean;
   onSend: (text: string) => void;
   onAbort: () => void;
+  queue: string[];
+  onRemoveQueued: (index: number) => void;
 }) {
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSend(inputValueRef.current);
-      }}
-      className="px-6 pb-6 pt-2 max-w-3xl w-full mx-auto"
-    >
-      <div className="relative gradient-border rounded-2xl bg-bg-elevated/95 backdrop-blur-xl shadow-soft-lift p-2">
-        <textarea
-          ref={inputRef}
-          onChange={(e) => {
-            inputValueRef.current = e.target.value;
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              onSend(inputValueRef.current);
+    <div className="px-6 pb-6 pt-2 max-w-3xl w-full mx-auto">
+      {queue.length > 0 ? (
+        <div className="mb-2 space-y-1.5">
+          {queue.map((q, i) => (
+            <div
+              key={i}
+              className="group flex items-center gap-2 rounded-lg border border-accent/25 bg-accent/[0.05] px-3 py-1.5 text-[12px] animate-rise"
+            >
+              <ChevronUp className="h-3 w-3 text-accent shrink-0" />
+              <span className="text-[10px] uppercase tracking-kicker text-accent/80 font-semibold shrink-0">
+                Queued
+              </span>
+              <span className="flex-1 truncate text-ink-dim">{q}</span>
+              <button
+                onClick={() => onRemoveQueued(i)}
+                className="opacity-60 hover:opacity-100 text-ink-faint hover:text-ink transition-opacity"
+                aria-label="Remove queued message"
+                title="Remove from queue"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSend(inputValueRef.current);
+        }}
+      >
+        <div className="relative gradient-border rounded-2xl bg-bg-elevated/95 backdrop-blur-xl shadow-soft-lift p-2">
+          <textarea
+            ref={inputRef}
+            onChange={(e) => {
+              inputValueRef.current = e.target.value;
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                onSend(inputValueRef.current);
+              }
+            }}
+            placeholder={
+              streaming
+                ? "Type to queue the next message…"
+                : "Ask about the engineering org…"
             }
-          }}
-          placeholder="Ask about the engineering org…"
-          rows={1}
-          className="w-full bg-transparent resize-none text-[14px] px-3 py-2.5 placeholder:text-ink-ghost focus:outline-none"
-          disabled={streaming}
-        />
-        <div className="flex items-center justify-between px-2 pt-1">
-          <div className="flex items-center gap-2 text-[10.5px] text-ink-faint">
-            <Kbd>↵</Kbd>
-            <span>send</span>
-            <span className="text-ink-ghost">·</span>
-            <Kbd>⇧</Kbd>
-            <Kbd>↵</Kbd>
-            <span>newline</span>
+            rows={1}
+            className="w-full bg-transparent resize-none text-[14px] px-3 py-2.5 placeholder:text-ink-ghost focus:outline-none"
+          />
+          <div className="flex items-center justify-between px-2 pt-1">
+            <div className="flex items-center gap-2 text-[10.5px] text-ink-faint">
+              <Kbd>↵</Kbd>
+              <span>{streaming ? "queue" : "send"}</span>
+              <span className="text-ink-ghost">·</span>
+              <Kbd>⇧</Kbd>
+              <Kbd>↵</Kbd>
+              <span>newline</span>
+            </div>
+            {streaming ? (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="submit"
+                  className="w-8 h-8 rounded-lg bg-accent/10 hover:bg-accent/20 text-accent flex items-center justify-center transition-all active:scale-95"
+                  title="Queue (Enter)"
+                >
+                  <ChevronUp className="w-4 h-4" strokeWidth={2.6} />
+                </button>
+                <button
+                  type="button"
+                  onClick={onAbort}
+                  className="w-8 h-8 rounded-lg bg-ink/20 hover:bg-ink/30 text-ink flex items-center justify-center transition-all active:scale-95"
+                  title="Stop everything (clears queue too)"
+                >
+                  <Square
+                    className="w-3.5 h-3.5"
+                    strokeWidth={2.6}
+                    fill="currentColor"
+                  />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="submit"
+                className="w-8 h-8 rounded-lg bg-ink hover:bg-white text-bg-deep flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95"
+              >
+                <ArrowUp className="w-4 h-4" strokeWidth={2.6} />
+              </button>
+            )}
           </div>
           {streaming ? (
-            <button
-              type="button"
-              onClick={onAbort}
-              className="w-8 h-8 rounded-lg bg-ink/20 hover:bg-ink/30 text-ink flex items-center justify-center transition-all active:scale-95"
-              title="Stop"
-            >
-              <Square className="w-3.5 h-3.5" strokeWidth={2.6} fill="currentColor" />
-            </button>
-          ) : (
-            <button
-              type="submit"
-              className="w-8 h-8 rounded-lg bg-ink hover:bg-white text-bg-deep flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95"
-            >
-              <ArrowUp className="w-4 h-4" strokeWidth={2.6} />
-            </button>
-          )}
+            <div className="absolute -top-2 left-3 px-2 text-[10px] text-ink-faint bg-bg-elevated rounded-full flex items-center gap-1.5">
+              <Loader2 className="w-2.5 h-2.5 animate-spin" />
+              Thinking
+            </div>
+          ) : null}
         </div>
-        {streaming ? (
-          <div className="absolute -top-2 left-3 px-2 text-[10px] text-ink-faint bg-bg-elevated rounded-full flex items-center gap-1.5">
-            <Loader2 className="w-2.5 h-2.5 animate-spin" />
-            Thinking
-          </div>
-        ) : null}
-      </div>
-    </form>
+      </form>
+    </div>
   );
 }
 

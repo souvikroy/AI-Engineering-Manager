@@ -58,13 +58,18 @@ type ChatState = {
   streaming: boolean;
   abortController: AbortController | null;
 
+  // Cursor-style message queue (FIFO). Items added while streaming; drained
+  // automatically when the current turn ends. Cleared on Stop / switch / new.
+  messageQueue: string[];
+
   // Actions
   loadSessions: () => Promise<void>;
   selectSession: (id: string | null) => Promise<void>;
   newSession: () => void; // local-only; persists on first send
   renameSession: (id: string, title: string) => Promise<void>;
   deleteSession: (id: string) => Promise<void>;
-  sendMessage: (text: string) => Promise<void>;
+  submitMessage: (text: string) => void; // unified entry: send-now or enqueue
+  removeQueued: (index: number) => void;
   setSelectedArtifact: (id: string | null) => void;
   abortStreaming: () => void;
 };
@@ -161,6 +166,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   selectedArtifactId: null,
   streaming: false,
   abortController: null,
+  messageQueue: [],
 
   loadSessions: async () => {
     set({ loadingSessions: true });
@@ -174,6 +180,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   selectSession: async (id) => {
+    // Switching sessions clears any pending queue — those queued intents
+    // belonged to the previous conversation.
+    set({ messageQueue: [] });
     if (id == null) {
       set({
         activeSessionId: null,
@@ -208,6 +217,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       messages: [],
       artifacts: {},
       selectedArtifactId: null,
+      messageQueue: [],
     });
   },
 
@@ -236,6 +246,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             messages: [],
             artifacts: {},
             selectedArtifactId: null,
+            messageQueue: [],
           }
         : {}),
     }));
@@ -246,109 +257,150 @@ export const useChatStore = create<ChatState>((set, get) => ({
   abortStreaming: () => {
     const ac = get().abortController;
     if (ac) ac.abort();
-    set({ streaming: false, abortController: null });
+    // Stop = stop everything: abort current + clear queue. The queue continues
+    // to drain on regular completion or error, but explicit Stop is "halt all".
+    set({ streaming: false, abortController: null, messageQueue: [] });
   },
 
-  sendMessage: async (text) => {
-    if (!text.trim() || get().streaming) return;
-
-    // Optimistically append user msg + empty assistant msg.
+  removeQueued: (index) => {
     set((s) => ({
-      messages: [
-        ...s.messages,
-        { role: "user", content: text },
-        { role: "assistant", content: "", pills: [] },
-      ],
-      streaming: true,
+      messageQueue: s.messageQueue.filter((_, i) => i !== index),
     }));
+  },
 
-    const ac = new AbortController();
-    set({ abortController: ac });
-
-    const body = {
-      messages: get()
-        .messages.filter((m) => m.role === "user" || m.role === "assistant")
-        .map((m) => ({ role: m.role, content: m.content })),
-      session_id: get().activeSessionId,
-    };
-
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal: ac.signal,
-      });
-      if (!res.body) throw new Error("No stream body");
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      const dispatch = (line: string) => {
-        if (!line.trim()) return;
-        let ev: ChatEvent | { type: "session"; id: string };
-        try {
-          ev = JSON.parse(line);
-        } catch {
-          return;
-        }
-        if (ev.type === "session") {
-          // Server created or confirmed a session id for this turn.
-          set({ activeSessionId: ev.id });
-          // Refresh sidebar so the new thread shows up.
-          void get().loadSessions();
-          return;
-        }
-        if (ev.type === "artifact") {
-          set((s) => {
-            const next = applyEvent(ev as ChatEvent, {
-              messages: s.messages,
-              artifacts: s.artifacts,
-            });
-            return { ...next, selectedArtifactId: (ev as { id: string }).id };
-          });
-          return;
-        }
-        set((s) =>
-          applyEvent(ev as ChatEvent, {
-            messages: s.messages,
-            artifacts: s.artifacts,
-          }),
-        );
-      };
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        let nl = buffer.indexOf("\n");
-        while (nl !== -1) {
-          const line = buffer.slice(0, nl);
-          buffer = buffer.slice(nl + 1);
-          dispatch(line);
-          nl = buffer.indexOf("\n");
-        }
-      }
-      const tail = buffer.trim();
-      if (tail) dispatch(tail);
-
-      // Refresh sessions so updatedAt re-orders the sidebar.
-      void get().loadSessions();
-    } catch (e) {
-      const isAbort = (e as { name?: string }).name === "AbortError";
-      if (!isAbort) {
-        set((s) => {
-          const head = s.messages.slice(0, -1);
-          const last = s.messages[s.messages.length - 1];
-          return {
-            messages: [
-              ...head,
-              { ...last, content: last.content + `\n\n_Error: ${(e as Error).message}_` },
-            ],
-          };
-        });
-      }
-    } finally {
-      set({ streaming: false, abortController: null });
+  // Unified entry point. If the agent is busy, queue the message; otherwise
+  // dispatch immediately. Returns synchronously — the actual send is fire-
+  // and-forget so callers can keep typing.
+  submitMessage: (text) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    if (get().streaming) {
+      set((s) => ({ messageQueue: [...s.messageQueue, trimmed] }));
+      return;
     }
+    void runSend(trimmed, get, set);
   },
 }));
+
+// ── Private: actual stream-and-persist for one user turn ─────────────
+async function runSend(
+  text: string,
+  get: () => ChatState,
+  set: (
+    partial:
+      | Partial<ChatState>
+      | ((s: ChatState) => Partial<ChatState>),
+  ) => void,
+): Promise<void> {
+  // Optimistically append user msg + empty assistant placeholder.
+  set((s) => ({
+    messages: [
+      ...s.messages,
+      { role: "user", content: text },
+      { role: "assistant", content: "", pills: [] },
+    ],
+    streaming: true,
+  }));
+
+  const ac = new AbortController();
+  set({ abortController: ac });
+
+  const body = {
+    messages: get()
+      .messages.filter((m) => m.role === "user" || m.role === "assistant")
+      .map((m) => ({ role: m.role, content: m.content })),
+    session_id: get().activeSessionId,
+  };
+
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: ac.signal,
+    });
+    if (!res.body) throw new Error("No stream body");
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    const dispatch = (line: string) => {
+      if (!line.trim()) return;
+      let ev: ChatEvent | { type: "session"; id: string };
+      try {
+        ev = JSON.parse(line);
+      } catch {
+        return;
+      }
+      if (ev.type === "session") {
+        set({ activeSessionId: ev.id });
+        void get().loadSessions();
+        return;
+      }
+      if (ev.type === "artifact") {
+        set((s) => {
+          const next = applyEvent(ev as ChatEvent, {
+            messages: s.messages,
+            artifacts: s.artifacts,
+          });
+          return { ...next, selectedArtifactId: (ev as { id: string }).id };
+        });
+        return;
+      }
+      set((s) =>
+        applyEvent(ev as ChatEvent, {
+          messages: s.messages,
+          artifacts: s.artifacts,
+        }),
+      );
+    };
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let nl = buffer.indexOf("\n");
+      while (nl !== -1) {
+        const line = buffer.slice(0, nl);
+        buffer = buffer.slice(nl + 1);
+        dispatch(line);
+        nl = buffer.indexOf("\n");
+      }
+    }
+    const tail = buffer.trim();
+    if (tail) dispatch(tail);
+    void get().loadSessions();
+  } catch (e) {
+    const isAbort = (e as { name?: string }).name === "AbortError";
+    if (!isAbort) {
+      set((s) => {
+        const head = s.messages.slice(0, -1);
+        const last = s.messages[s.messages.length - 1];
+        return {
+          messages: [
+            ...head,
+            { ...last, content: last.content + `\n\n_Error: ${(e as Error).message}_` },
+          ],
+        };
+      });
+    }
+  } finally {
+    // Only own the streaming flag if we're still the active runSend.
+    // If Stop was clicked AND a new turn fired before this finally ran, a
+    // newer runSend will have replaced abortController — leave its state alone.
+    if (get().abortController === ac) {
+      set({ streaming: false, abortController: null });
+      // ── Drain the queue: dequeue the head and recursively send. If abort
+      // cleared the queue, this is a no-op. If a real error happened, we
+      // still drain — queued intents are independent.
+      const queue = get().messageQueue;
+      if (queue.length > 0) {
+        const [next, ...rest] = queue;
+        set({ messageQueue: rest });
+        // Microtask so the previous turn's state writes settle visually.
+        queueMicrotask(() => {
+          void runSend(next, get, set);
+        });
+      }
+    }
+  }
+}
