@@ -36,6 +36,8 @@ export type SessionSummary = {
   title: string;
   updatedAt: string;
   createdAt: string;
+  pinned?: boolean;
+  scheduleId?: string | null;
 };
 
 export type SessionDetail = SessionSummary & {
@@ -65,6 +67,12 @@ type ChatState = {
   // UI chrome state — persisted in localStorage so reloads remember it.
   sidebarCollapsed: boolean;
 
+  // Unread tracking for scheduled (pinned) threads. Per-session ISO timestamp
+  // of the last `updatedAt` the user actively viewed. A pinned session is
+  // unread when its current `updatedAt` is greater than this value. Persisted
+  // in localStorage so unread state survives reloads.
+  lastSeenBySession: Record<string, string>;
+
   // Actions
   loadSessions: () => Promise<void>;
   selectSession: (id: string | null) => Promise<void>;
@@ -78,9 +86,27 @@ type ChatState = {
   setSidebarCollapsed: (v: boolean) => void;
   toggleSidebar: () => void;
   hydrateUiPrefs: () => void; // called once on mount to read localStorage
+  markSessionSeen: (id: string, updatedAt: string) => void;
+  unreadPinnedCount: () => number;
+  createSchedule: (input: ScheduleCreateInput) => Promise<{ sessionId: string } | null>;
+  runScheduleNow: (scheduleId: string) => Promise<void>;
+};
+
+export type ScheduleCadence =
+  | { kind: "daily"; time: string }
+  | { kind: "weekdays"; time: string }
+  | { kind: "weekly"; time: string; weekday: number };
+
+export type ScheduleCreateInput = {
+  name?: string;
+  prompt: string;
+  cadence: ScheduleCadence;
+  prewarmOffsetMin?: number;
+  notifyEmail?: boolean;
 };
 
 const SIDEBAR_KEY = "aiem.sidebarCollapsed";
+const LAST_SEEN_KEY = "aiem.lastSeenBySession";
 
 function applyEvent(
   ev: ChatEvent,
@@ -176,13 +202,39 @@ export const useChatStore = create<ChatState>((set, get) => ({
   abortController: null,
   messageQueue: [],
   sidebarCollapsed: false,
+  lastSeenBySession: {},
 
   loadSessions: async () => {
     set({ loadingSessions: true });
     try {
       const res = await fetch("/api/sessions");
       const data = (await res.json()) as { sessions: SessionSummary[] };
-      set({ sessions: data.sessions, loadingSessions: false });
+      set((s) => {
+        // Seed lastSeen for any pinned session we've never tracked, so the
+        // first poll after a fresh hydrate doesn't flag every old fire as
+        // unread. New fires that land AFTER first observation will register
+        // because their updatedAt advances past this baseline.
+        const seeded = { ...s.lastSeenBySession };
+        let touched = false;
+        for (const ses of data.sessions) {
+          if (ses.pinned && !seeded[ses.id]) {
+            seeded[ses.id] = ses.updatedAt;
+            touched = true;
+          }
+        }
+        if (touched && typeof window !== "undefined") {
+          try {
+            window.localStorage.setItem(LAST_SEEN_KEY, JSON.stringify(seeded));
+          } catch {
+            // ignore
+          }
+        }
+        return {
+          sessions: data.sessions,
+          loadingSessions: false,
+          lastSeenBySession: seeded,
+        };
+      });
     } catch {
       set({ loadingSessions: false });
     }
@@ -218,6 +270,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       artifacts: detail.artifacts ?? {},
       selectedArtifactId: null,
     });
+    // Mark this session as seen up to the current updatedAt so any pulse
+    // / unread indicator clears immediately on click.
+    get().markSessionSeen(detail.id, detail.updatedAt);
   },
 
   newSession: () => {
@@ -301,6 +356,69 @@ export const useChatStore = create<ChatState>((set, get) => ({
     } catch {
       // ignore
     }
+    try {
+      const raw = window.localStorage.getItem(LAST_SEEN_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Record<string, string>;
+        if (parsed && typeof parsed === "object") {
+          set({ lastSeenBySession: parsed });
+        }
+      }
+    } catch {
+      // ignore
+    }
+  },
+
+  markSessionSeen: (id, updatedAt) => {
+    set((s) => {
+      const next = { ...s.lastSeenBySession, [id]: updatedAt };
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem(LAST_SEEN_KEY, JSON.stringify(next));
+        } catch {
+          // ignore
+        }
+      }
+      return { lastSeenBySession: next };
+    });
+  },
+
+  unreadPinnedCount: () => {
+    const s = get();
+    let n = 0;
+    for (const ses of s.sessions) {
+      if (!ses.pinned) continue;
+      const seen = s.lastSeenBySession[ses.id];
+      // First-time observation: treat as already seen so old fires don't pile
+      // up as "unread" on first hydrate. The mark happens lazily on the next
+      // selectSession or on the next loadSessions tick — see below.
+      if (!seen) continue;
+      if (new Date(ses.updatedAt).getTime() > new Date(seen).getTime()) n++;
+    }
+    return n;
+  },
+
+  createSchedule: async (input) => {
+    const res = await fetch("/api/schedules", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { sessionId?: string };
+    void get().loadSessions();
+    return data.sessionId ? { sessionId: data.sessionId } : null;
+  },
+
+  runScheduleNow: async (scheduleId) => {
+    await fetch(`/api/schedules/${scheduleId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ run_now: true }),
+    });
+    // Server fires asynchronously; refresh sessions list shortly to pick up
+    // appended messages once the chat route persists.
+    setTimeout(() => void get().loadSessions(), 1500);
   },
 
   // Unified entry point. If the agent is busy, queue the message; otherwise

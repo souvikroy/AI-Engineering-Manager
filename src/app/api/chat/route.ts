@@ -32,7 +32,7 @@ export const maxDuration = 60;
 
 const MAX_TURNS = 6;
 
-const PERSONA = `You are CTO Brain, an engineering-management copilot for a CEO.
+const PERSONA_BASE = `You are CTO Brain, an engineering-management copilot for a CEO.
 Be direct, specific, and quantitative. Cite sources every time you reference a fact: \
 use the source URL or id from a tool result, formatted as [source-id]. Never invent \
 data. If a tool returns nothing, say so and propose a different tool to call.
@@ -55,6 +55,47 @@ Routing rules for non-artifact tools:
 After calling a produce_* tool, write 1–2 sentences in chat introducing the
 artifact ("I've put together a sprint health report — top three risks are…").
 Don't repeat the artifact's full body. End with a one-line "Sources & freshness" footer.`;
+
+/**
+ * Build the time-sensitive part of the system prompt. Rebuilt per request so
+ * the model always sees the current clock + a precise rolling-24h window for
+ * "today". Tool calls are then expected to scope `since`/`until` to this
+ * window when the user asks about today / latest / current state.
+ */
+function buildFreshnessContext(): string {
+  const now = new Date();
+  const since = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const local = (d: Date) =>
+    d.toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      weekday: "short",
+      hour12: false,
+    });
+  return `## Time and freshness context
+
+Right now (server local clock): **${local(now)}**.
+"Today" / "latest" / "what's new" → rolling 24h window:
+  since = ${since.toISOString()}
+  until = ${now.toISOString()}
+"This week" → past 7 days:
+  since = ${lastWeek.toISOString()}
+  until = ${now.toISOString()}
+
+When the user uses time-relative phrasing — "today", "yesterday", "latest",
+"what's new", "since this morning", "anything fresh" — pass these timestamps
+to the matching tool's \`since\` / \`until\` parameters so retrieval is scoped
+to the right window. Do NOT scope when the user asks an open-ended question
+(e.g. "describe the sprint") that doesn't reference time.
+
+Quantify staleness in your final answer when relevant: prefer "from a Jira
+update 4 minutes ago" over "from Jira". If a tool returns data older than
+24h while the user asked about today, say so explicitly.`;
+}
 
 function getClient(): Anthropic {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -128,12 +169,13 @@ export async function POST(req: Request) {
         }
 
         const systemBlocks = [
-          { type: "text" as const, text: PERSONA },
+          { type: "text" as const, text: PERSONA_BASE },
           {
             type: "text" as const,
-            // Cache breakpoint after the persona — persona changes ~never;
-            // freshness footer is volatile and lands after the breakpoint.
-            text: freshnessLine,
+            // Cache breakpoint after the static persona — persona changes ~never.
+            // Below this point everything is volatile (clock + freshness footer)
+            // and recomputed per request so "today" stays accurate.
+            text: `${buildFreshnessContext()}\n\n${freshnessLine}`,
             cache_control: { type: "ephemeral" as const },
           },
         ];

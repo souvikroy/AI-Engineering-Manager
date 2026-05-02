@@ -10,6 +10,7 @@ import {
   X,
   PanelLeftClose,
   PanelLeftOpen,
+  Pin,
 } from "lucide-react";
 import { useChatStore, type SessionSummary } from "@/lib/chat/store";
 import { BrandWordmark, BrandMark } from "@/components/BrandLogo";
@@ -43,6 +44,18 @@ function formatTime(updatedAt: string): string {
   return `${hh}:${m}${ap}`;
 }
 
+function relativeShort(updatedAt: string, now: Date): string {
+  const t = new Date(updatedAt).getTime();
+  const ms = now.getTime() - t;
+  const m = Math.floor(ms / 60_000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
+}
+
 // Stable color-dot per session id — visible in collapsed rail mode.
 function dotColor(id: string): string {
   // Editorial-warm palette — kept low-saturation so the rail stays calm.
@@ -73,6 +86,14 @@ export function ChatHistorySidebar() {
   const streaming = useChatStore((s) => s.streaming);
   const collapsed = useChatStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useChatStore((s) => s.toggleSidebar);
+  const lastSeen = useChatStore((s) => s.lastSeenBySession);
+
+  function isUnread(s: SessionSummary): boolean {
+    if (!s.pinned) return false;
+    const seen = lastSeen[s.id];
+    if (!seen) return false;
+    return new Date(s.updatedAt).getTime() > new Date(seen).getTime();
+  }
 
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
@@ -84,9 +105,14 @@ export function ChatHistorySidebar() {
   }, [loadSessions]);
 
   const now = new Date();
+  // Split out pinned (scheduled) threads — they get their own top section
+  // and bypass the date-bucket grouping.
+  const pinned = sessions.filter((s) => s.pinned);
+  const regular = sessions.filter((s) => !s.pinned);
+
   const groups = new Map<string, SessionSummary[]>();
   const order = ["Today", "Yesterday", "This week", "This month", "Older"];
-  for (const s of sessions) {
+  for (const s of regular) {
     const b = bucketFor(s.updatedAt, now);
     if (!groups.has(b)) groups.set(b, []);
     groups.get(b)!.push(s);
@@ -188,6 +214,55 @@ export function ChatHistorySidebar() {
         ) : (
           // ── Expanded: editorial group headers + thread rows ────────
           <div className="px-2 pb-3">
+            {pinned.length > 0 ? (
+              <div className="mb-3">
+                <div className="text-kicker px-3 mb-1.5 select-none flex items-center gap-1.5">
+                  <Pin className="h-2.5 w-2.5" />
+                  <span>Scheduled</span>
+                </div>
+                <ul className="space-y-0.5">
+                  {pinned.map((s) => {
+                    const isActive = s.id === activeId;
+                    const unread = isUnread(s);
+                    return (
+                      <li key={s.id}>
+                        <div
+                          className={`group relative flex items-center gap-2.5 pl-3 pr-2 py-1.5 rounded-lg cursor-pointer transition-colors text-body-md ${
+                            isActive
+                              ? "bg-surface-strong text-ink"
+                              : unread
+                                ? "bg-accent/[0.05] text-ink hover:bg-accent/[0.08]"
+                                : "text-ink-dim hover:bg-surface hover:text-ink"
+                          }`}
+                          onClick={() => void selectSession(s.id)}
+                        >
+                          {isActive && (
+                            <span className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-full bg-accent shadow-[0_0_8px_rgba(251,146,60,0.7)]" />
+                          )}
+                          <Pin
+                            className={`w-2.5 h-2.5 shrink-0 ${unread ? "text-accent" : "text-amber-300"}`}
+                            strokeWidth={2.5}
+                          />
+                          <span className={`flex-1 truncate ${unread ? "font-medium" : ""}`}>
+                            {s.title}
+                          </span>
+                          {unread ? (
+                            <span
+                              className="live-dot text-accent shrink-0"
+                              title="New since you last opened this thread"
+                            />
+                          ) : (
+                            <span className="opacity-0 group-hover:opacity-100 transition-opacity text-caption text-ink-faint shrink-0 italic font-display">
+                              updated {relativeShort(s.updatedAt, now)}
+                            </span>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ) : null}
             {order
               .filter((b) => groups.has(b))
               .map((b) => (

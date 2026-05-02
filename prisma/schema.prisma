@@ -185,10 +185,50 @@ model ChatSession {
   workspaceId String?
   title       String
   messages    String
+  pinned      Boolean  @default(false)
+  // If non-null, this session is the rolling output thread for a Schedule.
+  // The schedule appends a dated separator + assistant message on each fire.
+  scheduleId  String?  @unique
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  schedule    Schedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+
   @@index([workspaceId, updatedAt])
+  @@index([pinned, updatedAt])
+}
+
+// ─── Scheduled chats ─────────────────────────────────────────────────
+// User schedules a prompt to fire at a regular cadence. The runtime
+// (src/lib/schedule/scheduler.ts) hydrates active rows on Next.js boot,
+// sets in-process timers, and appends results into the linked rolling
+// ChatSession. Cron expression intentionally restricted to daily/weekly
+// time-of-day patterns for now.
+model Schedule {
+  id            String       @id @default(cuid())
+  workspaceId   String?
+  name          String       // human label for sidebar / manager
+  prompt        String       // the user message that fires
+  // Frequency the user picked. Encoded as JSON to keep the schema
+  // forward-compatible if we add weekly/specific-day later.
+  // Shape: { kind: "daily" | "weekdays" | "weekly", time: "HH:MM", weekday?: 0..6 }
+  cadence       String
+  tz            String       @default("UTC")
+  paused        Boolean      @default(false)
+  // Pre-warm offset in minutes (default 10). Set to 0 to disable.
+  prewarmOffsetMin Int       @default(10)
+  // When true, the scheduler also sends an email (via Resend) on each fire,
+  // with the assistant response inline + the artifact attached as a file.
+  // Recipient comes from USER_EMAIL env (single env-wide for this build).
+  notifyEmail   Boolean      @default(false)
+  lastFiredAt   DateTime?
+  nextFireAt    DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  session       ChatSession?
+
+  @@index([workspaceId, nextFireAt])
 }
 
 // ─── Meeting transcripts ─────────────────────────────────────────────

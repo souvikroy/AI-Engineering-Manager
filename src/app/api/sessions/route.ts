@@ -12,8 +12,15 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const rows = await prisma.chatSession.findMany({
-    orderBy: { updatedAt: "desc" },
-    select: { id: true, title: true, updatedAt: true, createdAt: true },
+    orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
+    select: {
+      id: true,
+      title: true,
+      updatedAt: true,
+      createdAt: true,
+      pinned: true,
+      scheduleId: true,
+    },
     take: 100,
   });
   return NextResponse.json({
@@ -22,6 +29,8 @@ export async function GET() {
       title: r.title,
       updatedAt: r.updatedAt.toISOString(),
       createdAt: r.createdAt.toISOString(),
+      pinned: r.pinned,
+      scheduleId: r.scheduleId,
     })),
   });
 }

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowUp, Loader2, Target, Brain, BarChart3, Siren, Square, X, ChevronUp, Menu } from "lucide-react";
+import { ArrowUp, Loader2, Target, Brain, BarChart3, Siren, Square, X, ChevronUp, Menu, CalendarClock } from "lucide-react";
 import { Kbd } from "@/components/Card";
 import { BrandMark, MascotHero } from "@/components/BrandLogo";
 import { StatusPill } from "@/components/StatusPill";
@@ -11,6 +11,7 @@ import { ArtifactPanel } from "@/components/ArtifactPanel";
 import { ChatHistorySidebar } from "@/components/ChatHistorySidebar";
 import { SourceChips, CitationChip } from "@/components/SourceChips";
 import { VerdictBadge } from "@/components/VerdictBadge";
+import { ScheduleModal } from "@/components/ScheduleModal";
 import { useChatStore, type ChatArtifact, type StoredMsg } from "@/lib/chat/store";
 import { useKeyboardShortcut } from "@/lib/hooks/useKeyboardShortcut";
 
@@ -65,15 +66,50 @@ export default function ChatPage() {
   const removeQueued = useChatStore((s) => s.removeQueued);
   const toggleSidebar = useChatStore((s) => s.toggleSidebar);
   const hydrateUiPrefs = useChatStore((s) => s.hydrateUiPrefs);
+  const loadSessions = useChatStore((s) => s.loadSessions);
+  // Subscribe to sessions + lastSeenBySession so the tab title reacts.
+  const sessions = useChatStore((s) => s.sessions);
+  const lastSeen = useChatStore((s) => s.lastSeenBySession);
 
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const inputValueRef = useRef<string>("");
 
-  // Hydrate sidebar collapse state from localStorage on first mount.
+  // Hydrate sidebar collapse state + lastSeen from localStorage on mount.
   useEffect(() => {
     hydrateUiPrefs();
   }, [hydrateUiPrefs]);
+
+  // Poll sessions every 30s while the tab is visible. Picks up scheduled
+  // fires so the sidebar pulse + tab title update without manual refresh.
+  useEffect(() => {
+    let cancelled = false;
+    const tick = () => {
+      if (document.visibilityState === "visible" && !cancelled) {
+        void loadSessions();
+      }
+    };
+    const id = window.setInterval(tick, 30_000);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [loadSessions]);
+
+  // Tab title prefix: `(N) CTO Brain` when there are unread pinned threads.
+  useEffect(() => {
+    let unread = 0;
+    for (const s of sessions) {
+      if (!s.pinned) continue;
+      const seen = lastSeen[s.id];
+      if (!seen) continue;
+      if (new Date(s.updatedAt).getTime() > new Date(seen).getTime()) unread++;
+    }
+    const base = "CTO Brain — your AI chief of staff";
+    document.title = unread > 0 ? `(${unread}) ${base}` : base;
+  }, [sessions, lastSeen]);
 
   // Cmd/Ctrl+B toggles the sidebar — works even when focus is in the textarea.
   useKeyboardShortcut(
@@ -110,6 +146,10 @@ export default function ChatPage() {
   // Mobile backdrop visibility — show when sidebar is expanded on small screens.
   const sidebarOpen = !useChatStore((s) => s.sidebarCollapsed);
 
+  // Schedule modal state — opened from a user message's "Schedule" button.
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [schedulePrompt, setSchedulePrompt] = useState("");
+
   return (
     <div className="flex h-[100dvh] w-screen overflow-hidden bg-bg">
       <ChatHistorySidebar />
@@ -141,7 +181,17 @@ export default function ChatPage() {
         {showHero ? (
           <HeroPane onPick={(text) => void send(text)} />
         ) : (
-          <ChatThread messages={messages} streaming={streaming} artifacts={artifacts} onOpenArtifact={setSelectedArtifact} endRef={endRef} />
+          <ChatThread
+            messages={messages}
+            streaming={streaming}
+            artifacts={artifacts}
+            onOpenArtifact={setSelectedArtifact}
+            onScheduleMessage={(p) => {
+              setSchedulePrompt(p);
+              setScheduleOpen(true);
+            }}
+            endRef={endRef}
+          />
         )}
 
         <Composer
@@ -163,6 +213,12 @@ export default function ChatPage() {
           />
         </div>
       ) : null}
+
+      <ScheduleModal
+        open={scheduleOpen}
+        initialPrompt={schedulePrompt}
+        onClose={() => setScheduleOpen(false)}
+      />
     </div>
   );
 }
@@ -230,12 +286,14 @@ function ChatThread({
   streaming,
   artifacts,
   onOpenArtifact,
+  onScheduleMessage,
   endRef,
 }: {
   messages: StoredMsg[];
   streaming: boolean;
   artifacts: Record<string, ChatArtifact>;
   onOpenArtifact: (id: string | null) => void;
+  onScheduleMessage: (prompt: string) => void;
   endRef: React.RefObject<HTMLDivElement | null>;
 }) {
   return (
@@ -249,6 +307,7 @@ function ChatThread({
             isLast={i === messages.length - 1}
             streaming={streaming}
             onOpenArtifact={onOpenArtifact}
+            onScheduleMessage={onScheduleMessage}
           />
         ))}
         <div ref={endRef} />
@@ -263,16 +322,21 @@ function MessageBubble({
   isLast,
   streaming,
   onOpenArtifact,
+  onScheduleMessage,
 }: {
   msg: StoredMsg;
   artifact?: ChatArtifact;
   isLast: boolean;
   streaming: boolean;
   onOpenArtifact: (id: string | null) => void;
+  onScheduleMessage: (prompt: string) => void;
 }) {
   const isUser = msg.role === "user";
+  // Skip the schedule button for auto-fired messages — they came from the
+  // scheduler, no point scheduling a schedule's own output again.
+  const isAutoFired = isUser && /^\[Auto-fired \d/i.test(msg.content);
   return (
-    <div className={`animate-slide-up ${isUser ? "ml-16" : "mr-16"}`}>
+    <div className={`group animate-slide-up ${isUser ? "ml-16" : "mr-16"}`}>
       <div className="flex items-center gap-2.5 mb-2.5">
         {isUser ? (
           <div className="w-5 h-5 rounded-full bg-accent-gradient flex items-center justify-center text-[9px] font-semibold text-bg-deep">
@@ -286,6 +350,16 @@ function MessageBubble({
         </span>
         {!isUser && msg.verdict ? (
           <VerdictBadge verdict={msg.verdict} />
+        ) : null}
+        {isUser && !isAutoFired ? (
+          <button
+            onClick={() => onScheduleMessage(msg.content)}
+            className="opacity-0 group-hover:opacity-100 transition-opacity ml-auto inline-flex items-center gap-1 text-caption text-ink-faint hover:text-accent rounded-full px-2 py-0.5 hover:bg-accent/[0.06]"
+            title="Schedule this prompt to run daily"
+          >
+            <CalendarClock className="h-3 w-3" />
+            <span className="font-display italic">Schedule</span>
+          </button>
         ) : null}
       </div>
 
