@@ -1,253 +1,579 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowUp, Sparkles, Loader2, Target, Brain, BarChart3, Siren } from "lucide-react";
+import { ArrowUp, Loader2, Target, Brain, BarChart3, Siren, Square, X, ChevronUp, Menu, CalendarClock } from "lucide-react";
 import { Kbd } from "@/components/Card";
+import { BrandMark, MascotHero } from "@/components/BrandLogo";
+import { StatusPill } from "@/components/StatusPill";
+import { ArtifactPanel } from "@/components/ArtifactPanel";
+import { ChatHistorySidebar } from "@/components/ChatHistorySidebar";
+import { SourceChips, CitationChip } from "@/components/SourceChips";
+import { VerdictBadge } from "@/components/VerdictBadge";
+import { ScheduleModal } from "@/components/ScheduleModal";
+import { useChatStore, type ChatArtifact, type StoredMsg } from "@/lib/chat/store";
+import { useKeyboardShortcut } from "@/lib/hooks/useKeyboardShortcut";
 
-type Msg = { role: "user" | "assistant"; content: string };
+type Suggestion = { icon: React.ReactNode; title: string; text: string };
 
-const SUGGESTIONS = [
-  {
-    icon: <Target className="w-4 h-4" />,
-    title: "Sprint risk this week",
-    text: "What's the biggest sprint risk this week and why?",
-  },
-  {
-    icon: <Brain className="w-4 h-4" />,
-    title: "Burnout signals",
-    text: "Which engineers are stuck or showing burnout signals?",
-  },
-  {
-    icon: <BarChart3 className="w-4 h-4" />,
-    title: "OKR progress",
-    text: "Summarize OKR progress and the two riskiest items.",
-  },
-  {
-    icon: <Siren className="w-4 h-4" />,
-    title: "Pre-leadership escalations",
-    text: "Anything I should escalate before the leadership sync?",
-  },
-];
+const ALL_SUGGESTIONS: Record<"morning" | "afternoon" | "evening" | "late", Suggestion[]> = {
+  morning: [
+    { icon: <BarChart3 className="w-4 h-4" />, title: "Today's brief", text: "Give me today's intelligence brief — what changed overnight?" },
+    { icon: <Target className="w-4 h-4" />, title: "Sprint risk this week", text: "What's the biggest sprint risk this week and why?" },
+    { icon: <Brain className="w-4 h-4" />, title: "Burnout signals", text: "Which engineers are stuck or showing burnout signals?" },
+    { icon: <Siren className="w-4 h-4" />, title: "Open incidents", text: "Anything new on the open incidents from yesterday?" },
+  ],
+  afternoon: [
+    { icon: <Target className="w-4 h-4" />, title: "Sprint health", text: "How is the current sprint tracking? Top three risks." },
+    { icon: <BarChart3 className="w-4 h-4" />, title: "Engineering leaderboard", text: "Show me the engineering leaderboard for this sprint." },
+    { icon: <Brain className="w-4 h-4" />, title: "Standup digest", text: "Summarize the last week of standups by team." },
+    { icon: <Siren className="w-4 h-4" />, title: "PR review", text: "Review the latest open PR." },
+  ],
+  evening: [
+    { icon: <Siren className="w-4 h-4" />, title: "Pre-leadership escalations", text: "Anything I should escalate before the leadership sync?" },
+    { icon: <Target className="w-4 h-4" />, title: "Today's slips", text: "What slipped today? Which tickets stalled and why?" },
+    { icon: <BarChart3 className="w-4 h-4" />, title: "OKR progress", text: "Summarize OKR progress and the two riskiest items." },
+    { icon: <Brain className="w-4 h-4" />, title: "End-of-day signals", text: "Any standout signals from the day worth flagging?" },
+  ],
+  late: [
+    { icon: <Brain className="w-4 h-4" />, title: "Tomorrow's prep", text: "What do I need to look at first thing tomorrow morning?" },
+    { icon: <Target className="w-4 h-4" />, title: "Open blockers", text: "Which engineers are blocked heading into tomorrow?" },
+    { icon: <BarChart3 className="w-4 h-4" />, title: "OKR snapshot", text: "Quick snapshot of OKR progress as of right now." },
+    { icon: <Siren className="w-4 h-4" />, title: "Anything on fire?", text: "Anything on fire I should know about before signing off?" },
+  ],
+};
+
+function timeOfDay(now: Date): "morning" | "afternoon" | "evening" | "late" {
+  const h = now.getHours();
+  if (h < 5) return "late";
+  if (h < 12) return "morning";
+  if (h < 17) return "afternoon";
+  if (h < 22) return "evening";
+  return "late";
+}
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState<Msg[]>([]);
-  const [input, setInput] = useState("");
-  const [streaming, setStreaming] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
+  const messages = useChatStore((s) => s.messages);
+  const artifacts = useChatStore((s) => s.artifacts);
+  const selectedArtifactId = useChatStore((s) => s.selectedArtifactId);
+  const setSelectedArtifact = useChatStore((s) => s.setSelectedArtifact);
+  const streaming = useChatStore((s) => s.streaming);
+  const submitMessage = useChatStore((s) => s.submitMessage);
+  const abortStreaming = useChatStore((s) => s.abortStreaming);
+  const activeSessionId = useChatStore((s) => s.activeSessionId);
+  const messageQueue = useChatStore((s) => s.messageQueue);
+  const removeQueued = useChatStore((s) => s.removeQueued);
+  const toggleSidebar = useChatStore((s) => s.toggleSidebar);
+  const hydrateUiPrefs = useChatStore((s) => s.hydrateUiPrefs);
+  const loadSessions = useChatStore((s) => s.loadSessions);
+  // Subscribe to sessions + lastSeenBySession so the tab title reacts.
+  const sessions = useChatStore((s) => s.sessions);
+  const lastSeen = useChatStore((s) => s.lastSeenBySession);
+
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inputValueRef = useRef<string>("");
+
+  // Hydrate sidebar collapse state + lastSeen from localStorage on mount.
+  useEffect(() => {
+    hydrateUiPrefs();
+  }, [hydrateUiPrefs]);
+
+  // Poll sessions every 30s while the tab is visible. Picks up scheduled
+  // fires so the sidebar pulse + tab title update without manual refresh.
+  useEffect(() => {
+    let cancelled = false;
+    const tick = () => {
+      if (document.visibilityState === "visible" && !cancelled) {
+        void loadSessions();
+      }
+    };
+    const id = window.setInterval(tick, 30_000);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [loadSessions]);
+
+  // Tab title prefix: `(N) CTO Brain` when there are unread pinned threads.
+  useEffect(() => {
+    let unread = 0;
+    for (const s of sessions) {
+      if (!s.pinned) continue;
+      const seen = lastSeen[s.id];
+      if (!seen) continue;
+      if (new Date(s.updatedAt).getTime() > new Date(seen).getTime()) unread++;
+    }
+    const base = "CTO Brain — your AI chief of staff";
+    document.title = unread > 0 ? `(${unread}) ${base}` : base;
+  }, [sessions, lastSeen]);
+
+  // Cmd/Ctrl+B toggles the sidebar — works even when focus is in the textarea.
+  useKeyboardShortcut(
+    { key: "b", meta: true },
+    (e) => {
+      e.preventDefault();
+      toggleSidebar();
+    },
+  );
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages]);
+  }, [messages, messageQueue]);
 
-  async function send(text: string) {
-    if (!text.trim() || streaming) return;
-    const userMsg: Msg = { role: "user", content: text };
-    const next = [...messages, userMsg];
-    setMessages(next);
-    setInput("");
-    setStreaming(true);
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, [activeSessionId]);
 
-    const ac = new AbortController();
-    abortRef.current = ac;
-
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: next }),
-        signal: ac.signal,
-      });
-      if (!res.body) throw new Error("No stream body");
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let acc = "";
-      setMessages((m) => [...m, { role: "assistant", content: "" }]);
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        acc += decoder.decode(value, { stream: true });
-        setMessages((m) => {
-          const copy = [...m];
-          copy[copy.length - 1] = { role: "assistant", content: acc };
-          return copy;
-        });
-      }
-    } catch (e) {
-      setMessages((m) => [
-        ...m,
-        { role: "assistant", content: `_Error: ${(e as Error).message}_` },
-      ]);
-    } finally {
-      setStreaming(false);
-      inputRef.current?.focus();
-    }
+  function send(text: string) {
+    if (!text.trim()) return;
+    inputValueRef.current = "";
+    if (inputRef.current) inputRef.current.value = "";
+    // submitMessage routes to send-now or enqueue based on streaming state.
+    submitMessage(text);
   }
 
-  return (
-    <div className="flex flex-col h-[calc(100vh-96px)] animate-fade-in">
-      {messages.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center pb-24">
-          {/* Hero */}
-          <div className="text-center max-w-2xl mx-auto mb-10 animate-rise">
-            <div className="inline-flex relative mb-6">
-              <div className="w-14 h-14 rounded-2xl bg-accent-gradient flex items-center justify-center shadow-ring-accent">
-                <Sparkles className="w-6 h-6 text-bg-deep" strokeWidth={2.4} />
-              </div>
-              <div className="absolute inset-0 rounded-2xl bg-accent blur-2xl opacity-50 -z-10" />
-            </div>
-            <h1 className="text-[40px] font-semibold tracking-display leading-[1.05] mb-3 text-balance">
-              <span className="text-gradient-ink">What's on your mind,</span>
-              <br />
-              <span className="text-gradient-accent">Souvik?</span>
-            </h1>
-            <p className="text-[14px] text-ink-dim max-w-md mx-auto text-pretty">
-              Grounded on the latest brief, OKRs, incidents, and 1:1 history.
-              Ask anything an EM would.
-            </p>
-          </div>
+  const activeArtifact: ChatArtifact | null =
+    selectedArtifactId && artifacts[selectedArtifactId]
+      ? artifacts[selectedArtifactId]
+      : null;
 
-          {/* Suggestions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-w-2xl w-full">
-            {SUGGESTIONS.map((s, i) => (
-              <button
-                key={s.text}
-                onClick={() => send(s.text)}
-                style={{ animationDelay: `${i * 60}ms` }}
-                className="group relative text-left p-4 rounded-xl border border-border bg-surface hover:bg-surface-hover hover:border-accent/30 transition-all hairline animate-rise"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="shrink-0 w-8 h-8 rounded-lg bg-bg-elevated/80 ring-1 ring-inset ring-white/[0.06] flex items-center justify-center text-ink-dim group-hover:text-accent group-hover:ring-accent/30 transition-colors">
-                    {s.icon}
+  const showHero = messages.length === 0;
+
+  // Mobile backdrop visibility — show when sidebar is expanded on small screens.
+  const sidebarOpen = !useChatStore((s) => s.sidebarCollapsed);
+
+  // Schedule modal state — opened from a user message's "Schedule" button.
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [schedulePrompt, setSchedulePrompt] = useState("");
+
+  return (
+    <div className="flex h-[100dvh] w-screen overflow-hidden bg-bg">
+      <ChatHistorySidebar />
+
+      {/* Mobile-only backdrop that dims the chat when the sidebar is open. */}
+      {sidebarOpen ? (
+        <button
+          onClick={toggleSidebar}
+          aria-label="Close sidebar"
+          className="md:hidden fixed inset-0 z-20 bg-black/40 backdrop-blur-[2px] animate-fade-in"
+        />
+      ) : null}
+
+      {/* Mobile-only hamburger to open the sidebar. Hidden on md+. */}
+      <button
+        onClick={toggleSidebar}
+        className="md:hidden fixed top-3 left-3 z-40 w-9 h-9 rounded-full bg-bg-elevated/80 backdrop-blur surface-card text-ink-faint hover:text-ink flex items-center justify-center"
+        title="Toggle sidebar"
+        aria-label="Toggle sidebar"
+      >
+        <Menu className="w-4 h-4" />
+      </button>
+
+      <div
+        className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${
+          activeArtifact ? "flex-1 md:min-w-[420px]" : "flex-1"
+        }`}
+      >
+        {showHero ? (
+          <HeroPane onPick={(text) => void send(text)} />
+        ) : (
+          <ChatThread
+            messages={messages}
+            streaming={streaming}
+            artifacts={artifacts}
+            onOpenArtifact={setSelectedArtifact}
+            onScheduleMessage={(p) => {
+              setSchedulePrompt(p);
+              setScheduleOpen(true);
+            }}
+            endRef={endRef}
+          />
+        )}
+
+        <Composer
+          inputRef={inputRef}
+          inputValueRef={inputValueRef}
+          streaming={streaming}
+          onSend={send}
+          onAbort={abortStreaming}
+          queue={messageQueue}
+          onRemoveQueued={removeQueued}
+        />
+      </div>
+
+      {activeArtifact ? (
+        <div className="fixed md:relative inset-0 md:inset-auto md:w-1/2 md:min-w-[420px] md:max-w-[820px] h-full z-30 md:z-auto animate-enter">
+          <ArtifactPanel
+            artifact={activeArtifact}
+            onClose={() => setSelectedArtifact(null)}
+          />
+        </div>
+      ) : null}
+
+      <ScheduleModal
+        open={scheduleOpen}
+        initialPrompt={schedulePrompt}
+        onClose={() => setScheduleOpen(false)}
+      />
+    </div>
+  );
+}
+
+function HeroPane({ onPick }: { onPick: (text: string) => void }) {
+  const now = new Date();
+  const greeting = greetingForNow(now);
+  const tod = timeOfDay(now);
+  const suggestions = ALL_SUGGESTIONS[tod];
+  return (
+    <div className="flex-1 overflow-y-auto">
+      <div className="flex flex-col items-center justify-center min-h-full px-8 py-20 max-w-3xl mx-auto">
+        <div className="text-center mb-14 animate-rise">
+          <div className="inline-flex relative mb-8">
+            <MascotHero size={96} />
+            <div className="absolute inset-0 blur-3xl opacity-30 -z-10 bg-accent" />
+          </div>
+          <h1
+            className="font-display text-display text-ink-cream tracking-display leading-[1.05] mb-4 text-balance"
+            style={{ fontWeight: 360 }}
+          >
+            <span className="block">
+              <em className="not-italic font-display italic text-ink-cream/90">
+                {greeting},
+              </em>
+            </span>
+            <span className="block">Souvik.</span>
+          </h1>
+          <p className="font-display italic text-body-lg text-ink-dim max-w-md mx-auto text-pretty">
+            Grounded on the latest brief, OKRs, incidents, and standup history.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl">
+          {suggestions.map((s, i) => (
+            <button
+              key={s.text}
+              onClick={() => onPick(s.text)}
+              style={{ animationDelay: `${i * 70}ms` }}
+              className="group relative text-left p-5 rounded-2xl bg-surface surface-hairline hover:surface-card hover:bg-surface-hover transition-all duration-200 animate-rise"
+            >
+              <div className="flex items-start gap-3.5">
+                <div className="shrink-0 w-9 h-9 rounded-full bg-bg-elevated/80 surface-hairline flex items-center justify-center text-ink-dim group-hover:text-accent transition-colors">
+                  {s.icon}
+                </div>
+                <div className="min-w-0 pt-0.5">
+                  <div className="font-display italic text-body-lg text-ink mb-1 leading-tight">
+                    {s.title}
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-[12.5px] font-medium text-ink mb-0.5 tracking-tight2">
-                      {s.title}
-                    </div>
-                    <div className="text-[12px] text-ink-faint leading-snug">
-                      {s.text}
-                    </div>
+                  <div className="text-body-md text-ink-faint leading-snug">
+                    {s.text}
                   </div>
                 </div>
-              </button>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChatThread({
+  messages,
+  streaming,
+  artifacts,
+  onOpenArtifact,
+  onScheduleMessage,
+  endRef,
+}: {
+  messages: StoredMsg[];
+  streaming: boolean;
+  artifacts: Record<string, ChatArtifact>;
+  onOpenArtifact: (id: string | null) => void;
+  onScheduleMessage: (prompt: string) => void;
+  endRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  return (
+    <div className="flex-1 overflow-y-auto">
+      <div className="max-w-3xl mx-auto px-6 py-6 space-y-5">
+        {messages.map((m, i) => (
+          <MessageBubble
+            key={i}
+            msg={m}
+            artifact={m.artifact_id ? artifacts[m.artifact_id] : undefined}
+            isLast={i === messages.length - 1}
+            streaming={streaming}
+            onOpenArtifact={onOpenArtifact}
+            onScheduleMessage={onScheduleMessage}
+          />
+        ))}
+        <div ref={endRef} />
+      </div>
+    </div>
+  );
+}
+
+function MessageBubble({
+  msg,
+  artifact,
+  isLast,
+  streaming,
+  onOpenArtifact,
+  onScheduleMessage,
+}: {
+  msg: StoredMsg;
+  artifact?: ChatArtifact;
+  isLast: boolean;
+  streaming: boolean;
+  onOpenArtifact: (id: string | null) => void;
+  onScheduleMessage: (prompt: string) => void;
+}) {
+  const isUser = msg.role === "user";
+  // Skip the schedule button for auto-fired messages — they came from the
+  // scheduler, no point scheduling a schedule's own output again.
+  const isAutoFired = isUser && /^\[Auto-fired \d/i.test(msg.content);
+  return (
+    <div className={`group animate-slide-up ${isUser ? "ml-16" : "mr-16"}`}>
+      <div className="flex items-center gap-2.5 mb-2.5">
+        {isUser ? (
+          <div className="w-5 h-5 rounded-full bg-accent-gradient flex items-center justify-center text-[9px] font-semibold text-bg-deep">
+            SR
+          </div>
+        ) : (
+          <BrandMark size={20} glow={false} />
+        )}
+        <span className="text-caption text-ink-faint font-medium tracking-tight2">
+          {isUser ? "You" : "CTO Brain"}
+        </span>
+        {!isUser && msg.verdict ? (
+          <VerdictBadge verdict={msg.verdict} />
+        ) : null}
+        {isUser && !isAutoFired ? (
+          <button
+            onClick={() => onScheduleMessage(msg.content)}
+            className="opacity-0 group-hover:opacity-100 transition-opacity ml-auto inline-flex items-center gap-1 text-caption text-ink-faint hover:text-accent rounded-full px-2 py-0.5 hover:bg-accent/[0.06]"
+            title="Schedule this prompt to run daily"
+          >
+            <CalendarClock className="h-3 w-3" />
+            <span className="font-display italic">Schedule</span>
+          </button>
+        ) : null}
+      </div>
+
+      <div
+        className={`rounded-[18px] px-5 py-4 ${
+          isUser
+            ? "bg-accent/[0.04] surface-hairline"
+            : "bg-surface surface-card"
+        }`}
+      >
+        {!isUser && msg.pills && msg.pills.length > 0 ? (
+          <div className="mb-3 flex flex-wrap gap-1.5">
+            {msg.pills.map((p, j) => (
+              <StatusPill key={j} state={p} />
             ))}
           </div>
+        ) : null}
+
+        <div className="prose-thin text-body-lg leading-[1.6]">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {msg.content || (streaming && isLast ? "…" : "")}
+          </ReactMarkdown>
         </div>
-      ) : (
-        <>
-          <header className="mb-6">
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-[10px] uppercase tracking-kicker text-ink-faint font-semibold">
-                Copilot
-              </span>
-              <span className="w-1 h-1 rounded-full bg-ink-ghost" />
-              <span className="text-[11px] text-ink-faint">
-                grounded on brief, OKRs, incidents
-              </span>
-            </div>
-            <h1 className="text-[26px] font-semibold tracking-tight2">
-              Ask anything.
-            </h1>
-          </header>
 
-          <div className="flex-1 overflow-y-auto -mx-2 px-2 pb-4">
-            <div className="space-y-5 max-w-3xl mx-auto">
-              {messages.map((m, i) => (
-                <div
-                  key={i}
-                  className={`animate-slide-up ${
-                    m.role === "user" ? "ml-12" : "mr-12"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    {m.role === "user" ? (
-                      <div className="w-5 h-5 rounded-full bg-accent-gradient flex items-center justify-center text-[9px] font-semibold text-bg-deep">
-                        SR
-                      </div>
-                    ) : (
-                      <div className="w-5 h-5 rounded-full bg-accent-gradient flex items-center justify-center shadow-ring-accent">
-                        <Sparkles
-                          className="w-2.5 h-2.5 text-bg-deep"
-                          strokeWidth={2.6}
-                        />
-                      </div>
-                    )}
-                    <span className="text-[11px] text-ink-faint font-medium">
-                      {m.role === "user" ? "You" : "AI EM Copilot"}
-                    </span>
-                  </div>
-                  <div
-                    className={`rounded-2xl border px-4 py-3 ${
-                      m.role === "user"
-                        ? "bg-accent/[0.06] border-accent/[0.18]"
-                        : "bg-surface border-border hairline"
-                    }`}
-                  >
-                    <div className="prose-thin">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {m.content ||
-                          (streaming && i === messages.length - 1 ? "…" : "")}
-                      </ReactMarkdown>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <div ref={endRef} />
-            </div>
+        {!isUser && artifact ? (
+          <button
+            onClick={() => onOpenArtifact(artifact.id)}
+            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-accent/[0.06] hover:bg-accent/[0.10] px-3.5 py-2 text-body-md font-medium text-accent surface-hairline transition-colors"
+          >
+            <span className="font-display italic">{artifactLabel(artifact)}</span>
+            <span className="text-ink-faint">→</span>
+          </button>
+        ) : null}
+
+        {!isUser &&
+        ((msg.sources_checked && msg.sources_checked.length > 0) ||
+          (msg.citations && msg.citations.length > 0) ||
+          msg.freshness) ? (
+          <div className="mt-4 pt-3.5 space-y-2.5 border-t border-white/[0.04]">
+            {msg.sources_checked && msg.sources_checked.length > 0 ? (
+              <SourceChips sources={msg.sources_checked} />
+            ) : null}
+            {msg.citations && msg.citations.length > 0 ? (
+              <div className="stagger-citations flex flex-wrap items-center gap-1.5">
+                <span className="text-kicker shrink-0 mr-1">
+                  ✦ Sources
+                </span>
+                {msg.citations.slice(0, 8).map((c, k) => (
+                  <CitationChip
+                    key={`${c.kind}:${c.id}:${k}`}
+                    kind={c.kind}
+                    id={c.id}
+                    url={c.url}
+                  />
+                ))}
+              </div>
+            ) : null}
+            {msg.freshness ? (
+              <div className="font-display italic text-caption text-ink-faint">
+                {msg.freshness}
+              </div>
+            ) : null}
           </div>
-        </>
-      )}
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
-      {/* Composer */}
+function Composer({
+  inputRef,
+  inputValueRef,
+  streaming,
+  onSend,
+  onAbort,
+  queue,
+  onRemoveQueued,
+}: {
+  inputRef: React.RefObject<HTMLTextAreaElement | null>;
+  inputValueRef: React.MutableRefObject<string>;
+  streaming: boolean;
+  onSend: (text: string) => void;
+  onAbort: () => void;
+  queue: string[];
+  onRemoveQueued: (index: number) => void;
+}) {
+  return (
+    <div className="px-6 pb-6 pt-2 max-w-3xl w-full mx-auto">
+      {queue.length > 0 ? (
+        <div className="mb-2 space-y-1.5">
+          {queue.map((q, i) => (
+            <div
+              key={i}
+              className="group flex items-center gap-2 rounded-lg border border-accent/25 bg-accent/[0.05] px-3 py-1.5 text-[12px] animate-rise"
+            >
+              <ChevronUp className="h-3 w-3 text-accent shrink-0" />
+              <span className="text-[10px] uppercase tracking-kicker text-accent/80 font-semibold shrink-0">
+                Queued
+              </span>
+              <span className="flex-1 truncate text-ink-dim">{q}</span>
+              <button
+                onClick={() => onRemoveQueued(i)}
+                className="opacity-60 hover:opacity-100 text-ink-faint hover:text-ink transition-opacity"
+                aria-label="Remove queued message"
+                title="Remove from queue"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          send(input);
+          onSend(inputValueRef.current);
         }}
-        className="sticky bottom-4 max-w-3xl w-full mx-auto"
       >
-        <div className="relative gradient-border rounded-2xl bg-bg-elevated/95 backdrop-blur-xl shadow-soft-lift p-2">
+        <div
+          className={`relative rounded-[20px] bg-bg-elevated/95 backdrop-blur-xl surface-lift p-3 transition-shadow duration-300 ${
+            streaming ? "composer-breathing" : ""
+          }`}
+        >
           <textarea
             ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              inputValueRef.current = e.target.value;
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                send(input);
+                onSend(inputValueRef.current);
               }
             }}
-            placeholder="Ask about the engineering org…"
+            placeholder={
+              streaming
+                ? "Type to queue the next message…"
+                : "Ask anything…"
+            }
             rows={1}
-            className="w-full bg-transparent resize-none text-[14px] px-3 py-2.5 placeholder:text-ink-ghost focus:outline-none"
-            disabled={streaming}
+            className="w-full bg-transparent resize-none px-3 py-2.5 text-body-lg leading-snug placeholder:text-ink-ghost placeholder:font-display placeholder:italic focus:outline-none"
           />
-          <div className="flex items-center justify-between px-2 pt-1">
-            <div className="flex items-center gap-2 text-[10.5px] text-ink-faint">
+          <div className="flex items-center justify-between px-2 pt-1.5">
+            <div className="flex items-center gap-2 text-caption text-ink-faint">
               <Kbd>↵</Kbd>
-              <span>send</span>
+              <span className="font-display italic">
+                {streaming ? "queue" : "send"}
+              </span>
               <span className="text-ink-ghost">·</span>
               <Kbd>⇧</Kbd>
               <Kbd>↵</Kbd>
-              <span>newline</span>
+              <span className="font-display italic">newline</span>
+              <span className="text-ink-ghost">·</span>
+              <Kbd>⌘</Kbd>
+              <Kbd>B</Kbd>
+              <span className="font-display italic">sidebar</span>
             </div>
-            <button
-              type="submit"
-              disabled={streaming || !input.trim()}
-              className="w-8 h-8 rounded-lg bg-ink hover:bg-white text-bg-deep flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95"
-            >
-              {streaming ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
+            {streaming ? (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="submit"
+                  className="w-9 h-9 rounded-xl bg-accent/10 hover:bg-accent/20 text-accent flex items-center justify-center transition-all active:scale-95"
+                  title="Queue (Enter)"
+                >
+                  <ChevronUp className="w-4 h-4" strokeWidth={2.6} />
+                </button>
+                <button
+                  type="button"
+                  onClick={onAbort}
+                  className="w-9 h-9 rounded-xl bg-ink/15 hover:bg-ink/25 text-ink flex items-center justify-center transition-all active:scale-95"
+                  title="Stop everything (clears queue too)"
+                >
+                  <Square
+                    className="w-3.5 h-3.5"
+                    strokeWidth={2.6}
+                    fill="currentColor"
+                  />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="submit"
+                className="w-9 h-9 rounded-xl bg-ink hover:bg-white text-bg-deep flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95"
+              >
                 <ArrowUp className="w-4 h-4" strokeWidth={2.6} />
-              )}
-            </button>
+              </button>
+            )}
           </div>
+          {streaming ? (
+            <div className="absolute -top-2.5 left-4 px-2.5 py-0.5 text-caption text-accent bg-bg-elevated rounded-full flex items-center gap-1.5 surface-hairline">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+              <span className="font-display italic tracking-tight">
+                Thinking
+              </span>
+            </div>
+          ) : null}
         </div>
       </form>
     </div>
   );
+}
+
+function artifactLabel(a: ChatArtifact): string {
+  if (a.kind === "doc") return `Open report — ${a.payload.title}`;
+  if (a.kind === "leaderboard") return `Open leaderboard — ${a.payload.title}`;
+  return `Open code review — PR #${a.payload.pr_number}`;
+}
+
+function greetingForNow(now: Date): string {
+  const h = now.getHours();
+  if (h < 5) return "Burning the midnight oil";
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  if (h < 21) return "Good evening";
+  return "Up late";
 }

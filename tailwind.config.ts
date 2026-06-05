@@ -7,12 +7,28 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
         mono: ["var(--font-geist-mono)", "ui-monospace", "monospace"],
+        // Fraunces (variable serif) — used for display-size headings,
+        // small-caps editorial labels, and italic accents only.
+        display: [
+          "var(--font-fraunces)",
+          "ui-serif",
+          "Georgia",
+          "Cambria",
+          "serif",
+        ],
+        serif: [
+          "var(--font-fraunces)",
+          "ui-serif",
+          "Georgia",
+          "Cambria",
+          "serif",
+        ],
       },
       colors: {
         bg: {
-          DEFAULT: "#08080b",
-          elevated: "#0d0d10",
-          deep: "#050507",
+          DEFAULT: "#0c0a08",
+          elevated: "#15110d",
+          deep: "#070605",
         },
         surface: {
           DEFAULT: "rgba(255,255,255,0.025)",
@@ -22,22 +38,25 @@ const config: Config = {
         border: {
           DEFAULT: "rgba(255,255,255,0.06)",
           strong: "rgba(255,255,255,0.12)",
-          accent: "rgba(167,139,250,0.30)",
+          accent: "rgba(251,146,60,0.32)",
         },
         ink: {
           DEFAULT: "#fafafa",
           dim: "rgba(255,255,255,0.65)",
           faint: "rgba(255,255,255,0.42)",
           ghost: "rgba(255,255,255,0.22)",
+          // Editorial cream — used sparingly on display-size serif text
+          // where extra warmth fits (hero greeting, artifact h1).
+          cream: "#f4ead9",
         },
         accent: {
-          DEFAULT: "#a78bfa",
-          hot: "#c4b5fd",
-          glow: "rgba(167,139,250,0.18)",
-          edge: "rgba(167,139,250,0.45)",
+          DEFAULT: "#fb923c",
+          hot: "#fdba74",
+          glow: "rgba(251,146,60,0.18)",
+          edge: "rgba(251,146,60,0.45)",
         },
         signal: {
-          pink: "#f472b6",
+          pink: "#fde68a",
           teal: "#5eead4",
           amber: "#fbbf24",
         },
@@ -52,11 +71,11 @@ const config: Config = {
       },
       backgroundImage: {
         "grid-fade":
-          "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(167,139,250,0.10), transparent 70%)",
+          "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(251,146,60,0.10), transparent 70%)",
         "shimmer":
           "linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)",
         "accent-gradient":
-          "linear-gradient(135deg, #a78bfa 0%, #f472b6 60%, #fbbf24 100%)",
+          "linear-gradient(135deg, #fb923c 0%, #fdba74 55%, #fde68a 100%)",
         "ink-gradient":
           "linear-gradient(180deg, #ffffff 0%, rgba(255,255,255,0.55) 100%)",
       },
@@ -95,11 +114,32 @@ const config: Config = {
         },
       },
       boxShadow: {
-        glow: "0 0 0 1px rgba(167,139,250,0.32), 0 8px 28px -8px rgba(167,139,250,0.32)",
+        glow: "0 0 0 1px rgba(251,146,60,0.32), 0 8px 28px -8px rgba(251,146,60,0.32)",
         "soft-lift":
           "0 1px 0 0 rgba(255,255,255,0.04) inset, 0 8px 32px -16px rgba(0,0,0,0.6)",
         "ring-accent":
-          "0 0 0 1px rgba(167,139,250,0.35), 0 0 24px -4px rgba(167,139,250,0.30)",
+          "0 0 0 1px rgba(251,146,60,0.35), 0 0 24px -4px rgba(251,146,60,0.30)",
+        // Editorial shadow scale — replaces hard borders on most surfaces.
+        // hairline = "this is a card" without an actual rule.
+        // card = standard message bubble, suggestion card.
+        // lift  = composer, artifact panel, sidebar (when expanded).
+        hairline: "inset 0 0 0 1px rgba(255,255,255,0.04)",
+        card: "inset 0 0 0 1px rgba(255,255,255,0.05), 0 1px 0 rgba(255,255,255,0.04), 0 18px 40px -16px rgba(0,0,0,0.45)",
+        lift: "inset 0 0 0 1px rgba(255,255,255,0.06), 0 1px 0 rgba(255,255,255,0.06), 0 32px 60px -20px rgba(0,0,0,0.55)",
+        "verified-glow":
+          "0 0 0 1px rgba(52,211,153,0.30), 0 0 24px -6px rgba(52,211,153,0.40)",
+      },
+      fontSize: {
+        // Editorial type scale. Display sizes are intended for Fraunces; the
+        // body sizes for Geist Sans. Pair with `font-display` / `font-sans`
+        // utilities at the call site.
+        display: ["56px", { lineHeight: "1.05", letterSpacing: "-0.02em" }],
+        h1: ["32px", { lineHeight: "1.15", letterSpacing: "-0.018em" }],
+        h2: ["22px", { lineHeight: "1.3", letterSpacing: "-0.012em" }],
+        "body-lg": ["15px", { lineHeight: "1.55" }],
+        "body-md": ["13.5px", { lineHeight: "1.5" }],
+        caption: ["11.5px", { lineHeight: "1.45" }],
+        kicker: ["10.5px", { lineHeight: "1.2", letterSpacing: "0.16em" }],
       },
     },
   },

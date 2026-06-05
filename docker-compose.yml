@@ -1,0 +1,79 @@
+# Local dev stack: Postgres+pgvector, Python context engine, Next.js frontend.
+# Bring up:  docker compose up --build
+# Bring down: docker compose down -v   (the -v wipes the postgres volume — use carefully)
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: aiem
+      POSTGRES_PASSWORD: aiem
+      POSTGRES_DB: aiem
+    ports:
+      - "5432:5432"
+    volumes:
+      - aiem_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aiem -d aiem"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  context:
+    build: ./services/context
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://aiem:aiem@postgres:5432/aiem
+      RAG_SCHEMA: rag
+      WORKSPACE_ID: personal
+      VOYAGE_API_KEY: ${VOYAGE_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL_FAST: ${ANTHROPIC_MODEL_FAST:-claude-haiku-4-5}
+      ANTHROPIC_MODEL_REASONING: ${ANTHROPIC_MODEL_REASONING:-claude-opus-4-5}
+      LOG_LEVEL: INFO
+      # Optional source creds — leave empty for Phase 1
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN:-}
+      SLACK_SIGNING_SECRET: ${SLACK_SIGNING_SECRET:-}
+      JIRA_BASE_URL: ${JIRA_BASE_URL:-}
+      JIRA_PAT: ${JIRA_PAT:-}
+      JIRA_EMAIL: ${JIRA_EMAIL:-}
+      SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN:-}
+      SENTRY_ORG: ${SENTRY_ORG:-}
+      CONFLUENCE_BASE_URL: ${CONFLUENCE_BASE_URL:-}
+      CONFLUENCE_PAT: ${CONFLUENCE_PAT:-}
+      NOTION_TOKEN: ${NOTION_TOKEN:-}
+      LINEAR_API_KEY: ${LINEAR_API_KEY:-}
+      GITHUB_PAT: ${GITHUB_PAT:-}
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  # Next.js is run from your host with `npm run dev` today (it points at sqlite).
+  # Once you switch Prisma to Postgres, uncomment this service so the whole stack
+  # stands up via docker compose. Leaving commented prevents accidental sqlite/Postgres
+  # collisions during the Phase-1 transition.
+  #
+  # web:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.web
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     context:
+  #       condition: service_started
+  #   environment:
+  #     DATABASE_URL: postgresql://aiem:aiem@postgres:5432/aiem?schema=app
+  #     PYTHON_CONTEXT_URL: http://context:8000
+  #     ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  #     GITHUB_PAT: ${GITHUB_PAT:-}
+  #     GITHUB_REPO: ${GITHUB_REPO:-}
+  #   ports:
+  #     - "3000:3000"
+
+volumes:
+  aiem_pgdata:

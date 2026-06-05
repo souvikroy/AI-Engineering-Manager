@@ -1,0 +1,58 @@
+[project]
+name = "ai-em-context"
+version = "0.1.0"
+description = "AI-EM context engineering service — recursive RAG over Slack/Jira/Sentry/Confluence/Linear/Notion/Sheets/GitHub"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "asyncpg>=0.30",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "alembic>=1.14",
+    "pgvector>=0.3.6",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "voyageai>=0.3",
+    "anthropic>=0.40",
+    "httpx>=0.28",
+    "tenacity>=9.0",
+    "structlog>=24.4",
+    "python-dotenv>=1.0",
+    # Source SDKs (lazy-imported in their adapters)
+    "slack-sdk>=3.33",
+    "jira>=3.8",
+    "atlassian-python-api>=3.41",
+    "notion-client>=2.2",
+    "google-api-python-client>=2.151",
+    "google-auth>=2.36",
+    "gql[httpx]>=3.5",
+    "tiktoken>=0.8",
+    "apscheduler>=3.10",
+    "sentry-sdk[fastapi]>=2.18",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "mypy>=1.13",
+    "ruff>=0.7",
+    "httpx>=0.28",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "ASYNC"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

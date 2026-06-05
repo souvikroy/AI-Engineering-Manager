@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 export const MODELS = {
-  reasoning: "claude-opus-4-5",
+  reasoning: "claude-sonnet-4-6",
   fast: "claude-haiku-4-5",
 } as const;
 

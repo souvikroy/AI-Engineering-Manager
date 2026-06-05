@@ -1,0 +1,57 @@
+{
+  "id": "ff_meeting_123",
+  "title": "Daily standup \u2014 May 1",
+  "dateString": "2026-05-01T09:00:00Z",
+  "duration": 15,
+  "transcript_url": "https://app.fireflies.ai/view/ff_meeting_123",
+  "organizer_email": "souvik@allysai.com",
+  "meeting_attendees": [
+    {
+      "name": "Souvik Roy",
+      "email": "souvik@allysai.com"
+    },
+    {
+      "name": "Priya Sharma",
+      "email": "priya@allysai.com"
+    },
+    {
+      "name": "Ravi Kumar",
+      "email": "ravi@allysai.com"
+    }
+  ],
+  "sentences": [
+    {
+      "speaker_name": "Souvik Roy",
+      "text": "Quick standup. Priya, you go first.",
+      "start_time": 0,
+      "speaker_id": 1
+    },
+    {
+      "speaker_name": "Priya Sharma",
+      "text": "Yesterday I shipped the auth refresh fix. Today I'm starting on rate limiting.",
+      "start_time": 8,
+      "speaker_id": 2
+    },
+    {
+      "speaker_name": "Priya Sharma",
+      "text": "No blockers.",
+      "start_time": 22,
+      "speaker_id": 2
+    },
+    {
+      "speaker_name": "Ravi Kumar",
+      "text": "Blocked on the schema migration \u2014 DBA hasn't approved yet.",
+      "start_time": 30,
+      "speaker_id": 3
+    }
+  ],
+  "summary": {
+    "overview": "Standup covering auth, rate limiting, and a blocked schema migration.",
+    "action_items": "- Ravi: ping the DBA for schema migration approval\n- Priya: scope rate-limiting work by EOD",
+    "keywords": [
+      "auth",
+      "rate limiting",
+      "schema migration"
+    ]
+  }
+}

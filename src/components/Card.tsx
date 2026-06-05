@@ -97,7 +97,7 @@ export function Pill({
                 ? "#fbbf24"
                 : tone === "ok"
                 ? "#34d399"
-                : "#a78bfa",
+                : "#fb923c",
           }}
         >
           <span
